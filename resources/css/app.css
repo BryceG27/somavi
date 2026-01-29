@@ -24,6 +24,10 @@ body {
     background-color: var(--sand);
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 [v-cloak] {
     display: none;
 }

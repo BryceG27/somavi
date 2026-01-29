@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\UserGroup;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,9 +19,24 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
+        $adminGroup = UserGroup::firstOrCreate(
+            ['slug' => UserGroup::ADMIN_SLUG],
+            ['name' => 'Admin'],
+        );
+
+        UserGroup::firstOrCreate(
+            ['slug' => UserGroup::CUSTOMER_SLUG],
+            ['name' => 'Customer'],
+        );
+
+        User::create([
+            'name' => 'Test',
+            'surname' => 'User',
             'email' => 'test@example.com',
+            'password' => Hash::make('password'),
+            'user_group_id' => $adminGroup->id,
         ]);
+
+        $this->call(ApartmentSeeder::class);
     }
 }
