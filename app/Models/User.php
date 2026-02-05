@@ -8,6 +8,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable implements FilamentUser
@@ -54,6 +55,11 @@ class User extends Authenticatable implements FilamentUser
     public function userGroup(): BelongsTo
     {
         return $this->belongsTo(UserGroup::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'customer_id');
     }
 
     public function isCustomer(): bool

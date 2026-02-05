@@ -2,16 +2,11 @@
     <div class="min-h-screen">
         <Head :title="content.name" />
 
-        <div class="fixed inset-0 -z-10">
-            <div
-                class="absolute inset-0 bg-cover bg-center"
-                :style="heroBackgroundStyle"
-            ></div>
-            <div class="absolute inset-0 bg-black/55"></div>
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%)]"></div>
-        </div>
-
-        <header class="fixed top-0 left-0 right-0 z-20">
+        <header
+            class="fixed top-0 left-0 right-0 z-20 transition-colors duration-300"
+            :class="headerOpacity > 0.08 ? 'backdrop-blur-md' : ''"
+            :style="{ backgroundColor: `rgba(0, 0, 0, ${headerOpacity})` }"
+        >
             <div class="mx-auto w-[90%] border-b border-white/25">
                 <nav class="flex items-center justify-between py-5 text-white">
                     <div class="flex items-center gap-4">
@@ -28,10 +23,10 @@
                         </div>
                     </div>
                     <div class="hidden items-center gap-8 text-xs font-semibold uppercase tracking-[0.3em] md:flex">
-                        <a href="#spazi" class="transition hover:text-white/70">Spazi</a>
-                        <a href="#galleria" class="transition hover:text-white/70">Galleria</a>
-                        <a href="#prenota" class="transition hover:text-white/70">Prenota</a>
-                        <a href="#contatti" class="transition hover:text-white/70">Contatti</a>
+                        <a href="#spazi" class="transition hover:text-white/70">{{ content.nav.spaces }}</a>
+                        <a href="#galleria" class="transition hover:text-white/70">{{ content.nav.gallery }}</a>
+                        <a href="#prenota" class="transition hover:text-white/70">{{ content.nav.booking }}</a>
+                        <a href="#contatti" class="transition hover:text-white/70">{{ content.nav.contact }}</a>
                     </div>
                     <div class="flex items-center gap-2 rounded-full border border-white/30 p-1 text-[11px] font-semibold uppercase tracking-[0.3em]">
                         <button
@@ -56,8 +51,16 @@
         </header>
 
         <main class="relative z-10">
-            <section class="flex min-h-screen items-center pt-24">
-                <div class="mx-auto w-[90%] max-w-6xl">
+            <section class="relative flex min-h-screen items-center overflow-hidden pt-24">
+                <div class="absolute inset-0">
+                    <div
+                        class="absolute inset-0 bg-cover bg-center"
+                        :style="heroBackgroundStyle"
+                    ></div>
+                    <div class="absolute inset-0 bg-black/55"></div>
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%)]"></div>
+                </div>
+                <div class="relative z-10 mx-auto w-[90%] max-w-6xl">
                     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
                         {{ content.kicker }}
                     </p>
@@ -110,22 +113,22 @@
 
             <section id="spazi" class="mx-auto w-[90%] max-w-6xl pb-20">
                 <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-                    <div class="rounded-[2.5rem] border border-white/15 bg-white/10 p-10 text-white backdrop-blur">
-                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">{{ content.spacesTitle }}</p>
+                    <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
+                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.spacesTitle }}</p>
                         <h2 class="mt-4 text-3xl font-semibold" style="font-family: var(--font-display);">
                             {{ content.spacesHeadline }}
                         </h2>
-                        <p class="mt-6 text-sm text-white/80">
+                        <p class="mt-6 text-sm text-[color:rgba(30,27,23,0.8)]">
                             {{ content.spacesBody }}
                         </p>
                         <div class="mt-8 flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em]">
-                            <span class="rounded-full border border-white/30 px-4 py-2">
+                            <span class="rounded-full border border-black/15 px-4 py-2">
                                 {{ content.roomsLabel }}
                             </span>
-                            <span class="rounded-full border border-white/30 px-4 py-2">
+                            <span class="rounded-full border border-black/15 px-4 py-2">
                                 {{ content.bedsLabel }}
                             </span>
-                            <span class="rounded-full border border-white/30 px-4 py-2">
+                            <span class="rounded-full border border-black/15 px-4 py-2">
                                 {{ content.guestsLabel }}
                             </span>
                         </div>
@@ -134,13 +137,13 @@
                         <div
                             v-for="card in infoCards"
                             :key="card.key"
-                            class="rounded-3xl border border-white/20 bg-white/15 p-6 text-white backdrop-blur"
+                            class="rounded-3xl border border-black/10 bg-white p-6 text-[var(--ink)]"
                         >
-                            <p class="text-xs uppercase tracking-[0.3em] text-white/70">{{ card.title }}</p>
+                            <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ card.title }}</p>
                             <p class="mt-3 text-lg font-semibold" style="font-family: var(--font-display);">{{ card.summary }}</p>
                             <button
                                 type="button"
-                                class="mt-6 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/90"
+                                class="mt-6 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.9)]"
                                 @click="openModal(card.key)"
                             >
                                 {{ content.detailsCta }}
@@ -152,14 +155,14 @@
             </section>
 
             <section id="galleria" class="mx-auto w-[90%] max-w-6xl pb-20">
-                <div class="flex flex-wrap items-end justify-between gap-6 text-white">
+                <div class="flex flex-wrap items-end justify-between gap-6 text-[var(--ink)]">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">{{ content.galleryTitle }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.galleryTitle }}</p>
                         <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
                             {{ content.galleryHeadline }}
                         </h2>
                     </div>
-                    <p class="max-w-lg text-sm text-white/70">
+                    <p class="max-w-lg text-sm text-[color:rgba(30,27,23,0.7)]">
                         {{ content.galleryBody }}
                     </p>
                 </div>
@@ -167,7 +170,7 @@
                     <div
                         v-for="image in galleryImages"
                         :key="image.id"
-                        class="group relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/20"
+                        class="group relative aspect-[4/3] overflow-hidden rounded-3xl border border-black/10"
                     >
                         <img
                             :src="image.url"
@@ -177,21 +180,21 @@
                         />
                         <div class="absolute inset-0 bg-black/20 opacity-0 transition group-hover:opacity-100"></div>
                     </div>
-                    <div v-if="galleryImages.length === 0" class="rounded-3xl border border-white/20 bg-white/10 p-8 text-white/80">
+                    <div v-if="galleryImages.length === 0" class="rounded-3xl border border-black/10 bg-white p-8 text-[color:rgba(30,27,23,0.8)]">
                         {{ content.galleryEmpty }}
                     </div>
                 </div>
             </section>
 
             <section id="prenota" class="mx-auto w-[90%] max-w-6xl pb-20">
-                <div class="rounded-[2.5rem] border border-white/20 bg-white/10 p-10 text-white backdrop-blur">
+                <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
                     <div class="flex flex-wrap items-center justify-between gap-6">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">{{ content.bookingTitle }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.bookingTitle }}</p>
                             <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
                                 {{ content.bookingHeadline }}
                             </h2>
-                            <p class="mt-4 max-w-xl text-sm text-white/80">
+                            <p class="mt-4 max-w-xl text-sm text-[color:rgba(30,27,23,0.8)]">
                                 {{ content.bookingBody }}
                             </p>
                         </div>
@@ -201,7 +204,7 @@
                                 :href="content.airbnbUrl"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="rounded-full border border-white/30 px-5 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em]"
                             >
                                 Airbnb
                             </a>
@@ -210,30 +213,30 @@
                                 :href="content.bookingUrl"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="rounded-full border border-white/30 px-5 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em]"
                             >
                                 Booking
                             </a>
                         </div>
                     </div>
                     <div class="mt-8 grid gap-4 md:grid-cols-2">
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/70">
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                             {{ content.arrivalLabel }}
-                            <input type="date" class="rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-base text-white" />
+                            <input type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
                         </label>
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-white/70">
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                             {{ content.departureLabel }}
-                            <input type="date" class="rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-base text-white" />
+                            <input type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
                         </label>
                     </div>
                     <div
                         v-if="content.checkInText || content.checkOutText"
-                        class="mt-6 flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-white/80"
+                        class="mt-6 flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.8)]"
                     >
-                        <span v-if="content.checkInText" class="rounded-full border border-white/30 px-4 py-2">
+                        <span v-if="content.checkInText" class="rounded-full border border-black/15 px-4 py-2">
                             {{ content.checkInText }}
                         </span>
-                        <span v-if="content.checkOutText" class="rounded-full border border-white/30 px-4 py-2">
+                        <span v-if="content.checkOutText" class="rounded-full border border-black/15 px-4 py-2">
                             {{ content.checkOutText }}
                         </span>
                     </div>
@@ -241,19 +244,19 @@
             </section>
 
             <section id="contatti" class="mx-auto w-[90%] max-w-6xl pb-24">
-                <div class="grid gap-8 rounded-[2.5rem] border border-white/20 bg-white/10 p-10 text-white backdrop-blur lg:grid-cols-[1.2fr_0.8fr]">
+                <div class="grid gap-8 rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)] lg:grid-cols-[1.2fr_0.8fr]">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">{{ content.contactTitle }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.contactTitle }}</p>
                         <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
                             {{ content.contactHeadline }}
                         </h2>
-                        <p class="mt-4 text-sm text-white/80">
+                        <p class="mt-4 text-sm text-[color:rgba(30,27,23,0.8)]">
                             {{ content.contactBody }}
                         </p>
                     </div>
-                    <div class="rounded-2xl border border-white/20 bg-white/15 p-6">
-                        <p class="text-xs uppercase tracking-[0.3em] text-white/70">Info rapide</p>
-                        <ul class="mt-4 space-y-3 text-sm text-white/80">
+                    <div class="rounded-2xl border border-black/10 bg-white p-6">
+                        <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">Info rapide</p>
+                        <ul class="mt-4 space-y-3 text-sm text-[color:rgba(30,27,23,0.8)]">
                             <li>{{ content.address || 'Indirizzo disponibile su richiesta' }}</li>
                             <li v-if="content.contactEmail">{{ content.contactEmail }}</li>
                             <li v-if="content.contactPhone">{{ content.contactPhone }}</li>
@@ -262,14 +265,14 @@
                             <a
                                 v-if="content.contactEmail"
                                 :href="`mailto:${content.contactEmail}`"
-                                class="rounded-full border border-white/30 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-4 py-2 text-xs uppercase tracking-[0.3em]"
                             >
                                 Email
                             </a>
                             <a
                                 v-if="content.whatsappUrl"
                                 :href="content.whatsappUrl"
-                                class="rounded-full border border-white/30 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-4 py-2 text-xs uppercase tracking-[0.3em]"
                             >
                                 WhatsApp
                             </a>
@@ -279,7 +282,7 @@
             </section>
         </main>
 
-        <footer class="border-t border-white/20 py-8 text-center text-xs uppercase tracking-[0.3em] text-white/60">
+        <footer class="border-t border-black/10 py-8 text-center text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
             {{ content.name }}
         </footer>
 
@@ -307,7 +310,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -317,7 +320,39 @@ const props = defineProps({
     },
 });
 
-const language = ref('it');
+const language = ref('en');
+const scrollY = ref(0);
+const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
+
+const onScroll = () => {
+    scrollY.value = window.scrollY || 0;
+};
+
+const pickDefaultLanguage = () => {
+    if (typeof window === 'undefined') {
+        return 'en';
+    }
+
+    const candidates = [
+        document.documentElement?.lang,
+        ...(navigator.languages || []),
+        navigator.language,
+    ].filter(Boolean);
+
+    return candidates.some((value) => String(value).toLowerCase().startsWith('it'))
+        ? 'it'
+        : 'en';
+};
+
+onMounted(() => {
+    language.value = pickDefaultLanguage();
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+});
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', onScroll);
+});
 
 const pickLocalized = (base, fallback = '') => {
     if (!props.apartment) {
@@ -408,6 +443,19 @@ const content = computed(() => {
         contactBody: language.value === 'it'
             ? 'Rispondiamo rapidamente per aiutarti con disponibilita e consigli locali.'
             : 'We reply quickly with availability and local tips.',
+        nav: language.value === 'it'
+            ? {
+                spaces: 'Spazi',
+                gallery: 'Galleria',
+                booking: 'Prenota',
+                contact: 'Contatti',
+            }
+            : {
+                spaces: 'Spaces',
+                gallery: 'Gallery',
+                booking: 'Book',
+                contact: 'Contact',
+            },
         labels: language.value === 'it'
             ? {
                 rooms: 'Stanze',

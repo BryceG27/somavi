@@ -24,6 +24,25 @@ body {
     background-color: var(--sand);
 }
 
+button,
+a,
+[role='button'] {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+button:hover,
+a:hover,
+[role='button']:hover {
+    opacity: 0.85;
+}
+
+button:disabled,
+[role='button'][aria-disabled='true'],
+a[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 html {
     scroll-behavior: smooth;
 }

@@ -18,4 +18,6 @@ RUN apk add --no-cache \
 
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
+COPY docker/php-uploads.ini /usr/local/etc/php/conf.d/php-uploads.ini
+
 WORKDIR /var/www
