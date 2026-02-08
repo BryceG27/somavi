@@ -29,7 +29,7 @@ class ApartmentAttachmentsRelationManager extends RelationManager
                     ->live(),
                 Forms\Components\FileUpload::make('path')
                     ->label('File')
-                    ->disk('public')
+                    ->disk('public_root')
                     ->directory('apartments')
                     ->acceptedFileTypes([
                         'image/*',
@@ -54,7 +54,7 @@ class ApartmentAttachmentsRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\ImageColumn::make('path')
                     ->label('Immagine')
-                    ->disk('public')
+                    ->disk('public_root')
                     ->getStateUsing(fn ($record) => $record->attachment_type === ApartmentAttachment::TYPE_IMAGE ? $record->path : null),
                 Tables\Columns\TextColumn::make('attachment_type')
                     ->label('Tipo')

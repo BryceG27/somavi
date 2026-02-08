@@ -28,23 +28,24 @@
                         <a href="#prenota" class="transition hover:text-white/70">{{ content.nav.booking }}</a>
                         <a href="#contatti" class="transition hover:text-white/70">{{ content.nav.contact }}</a>
                     </div>
-                    <div class="flex items-center gap-2 rounded-full border border-white/30 p-1 text-[11px] font-semibold uppercase tracking-[0.3em]">
-                        <button
-                            type="button"
-                            class="rounded-full px-3 py-2 transition"
-                            :class="language === 'it' ? 'bg-white text-black' : 'text-white'"
-                            @click="language = 'it'"
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <select
+                                v-model="language"
+                                class="appearance-none rounded-full border border-white/30 bg-white/10 px-4 py-2 pr-10 text-[11px] font-semibold uppercase tracking-[0.3em] text-white"
+                            >
+                                <option value="it">IT</option>
+                                <option value="en">EN</option>
+                            </select>
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/80">▾</span>
+                        </div>
+                        <a
+                            :href="isAuthenticated ? '/area-privata' : '/login'"
+                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-white/80"
+                            aria-label="Area privata"
                         >
-                            IT
-                        </button>
-                        <button
-                            type="button"
-                            class="rounded-full px-3 py-2 transition"
-                            :class="language === 'en' ? 'bg-white text-black' : 'text-white'"
-                            @click="language = 'en'"
-                        >
-                            EN
-                        </button>
+                            <i class="pi pi-user text-base"></i>
+                        </a>
                     </div>
                 </nav>
             </div>
@@ -111,7 +112,7 @@
                 </div>
             </section>
 
-            <section id="spazi" class="mx-auto w-[90%] max-w-6xl pb-20">
+            <section id="spazi" class="mx-auto w-[90%] max-w-6xl pb-20 mt-7">
                 <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                     <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
                         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.spacesTitle }}</p>
@@ -187,24 +188,24 @@
             </section>
 
             <section id="prenota" class="mx-auto w-[90%] max-w-6xl pb-20">
-                <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
+                <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-(--ink)">
                     <div class="flex flex-wrap items-center justify-between gap-6">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.bookingTitle }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[rgba(30,27,23,0.7)]">{{ content.bookingTitle }}</p>
                             <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
                                 {{ content.bookingHeadline }}
                             </h2>
-                            <p class="mt-4 max-w-xl text-sm text-[color:rgba(30,27,23,0.8)]">
+                            <p class="mt-4 max-w-xl text-sm text-[rgba(30,27,23,0.8)]">
                                 {{ content.bookingBody }}
                             </p>
                         </div>
-                        <div class="flex flex-wrap gap-3">
+                        <div class="flex flex-wrap gap-3" v-show="false">
                             <a
                                 v-if="content.airbnbUrl"
                                 :href="content.airbnbUrl"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em] hover:bg-black/5 transition"
                             >
                                 Airbnb
                             </a>
@@ -213,21 +214,21 @@
                                 :href="content.bookingUrl"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em]"
+                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em] hover:bg-black/5 transition"
                             >
                                 Booking
                             </a>
+                            <a
+                                v-if="content.vrboUrl"
+                                :href="content.vrboUrl"
+                                target="_blank"
+                                rel="noreferrer"
+                                class="rounded-full border border-black/15 px-5 py-2 text-xs uppercase tracking-[0.3em] hover:bg-black/5 transition"
+                            >
+                                Vrbo
+                            </a>
+
                         </div>
-                    </div>
-                    <div class="mt-8 grid gap-4 md:grid-cols-2">
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.arrivalLabel }}
-                            <input type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                        </label>
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.departureLabel }}
-                            <input type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                        </label>
                     </div>
                     <div
                         v-if="content.checkInText || content.checkOutText"
@@ -292,7 +293,7 @@
             v-model:visible="modals[card.key]"
             modal
             :header="modalCopy[card.key].title"
-            class="w-[90vw] max-w-lg"
+            class="w-[100vw] max-w-lg"
         >
             <div class="space-y-4">
                 <p class="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--terracotta)]">
@@ -304,6 +305,109 @@
                 <ul class="space-y-2 text-sm text-[var(--ink)]/70">
                     <li v-for="item in modalCopy[card.key].list" :key="item">- {{ item }}</li>
                 </ul>
+            </div>
+        </Dialog>
+
+        <Dialog
+            v-model:visible="bookingModalOpen"
+            modal
+            :header="content.bookingModalTitle"
+            class="w-5xl"
+            :pt="{
+                root: { class: 'rounded-[2.5rem] overflow-hidden' },
+                header: { class: 'bg-white text-[var(--ink)] border-b border-black/10' },
+                content: { class: 'bg-white text-[var(--ink)]' },
+                footer: { class: 'bg-white text-[var(--ink)]' },
+            }"
+        >
+            <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+                <form class="space-y-5 pt-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.arrivalLabel }}
+                            <input v-model="bookingForm.arrival" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                        </label>
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.departureLabel }}
+                            <input v-model="bookingForm.departure" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                        </label>
+                    </div>
+                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                        {{ content.guestsFormLabel }}
+                        <select v-model.number="bookingForm.guests" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
+                            <option v-for="count in guestOptions" :key="count" :value="count">
+                                {{ count }}
+                            </option>
+                        </select>
+                    </label>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.nameLabel }}
+                            <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                        </label>
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.emailLabel }}
+                            <input v-model="bookingForm.email" type="email" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                        </label>
+                    </div>
+                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                        {{ content.notesLabel }}
+                        <textarea v-model="bookingForm.notes" rows="4" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"></textarea>
+                    </label>
+                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                        <p>{{ content.registerPrompt }}</p>
+                        <div class="mt-3 flex flex-wrap gap-3 text-[11px] font-semibold">
+                            <a href="/register" class="rounded-full border border-black/15 px-4 py-2">
+                                {{ content.registerCta }}
+                            </a>
+                            <a href="/login" class="rounded-full border border-black/15 px-4 py-2">
+                                {{ content.loginCta }}
+                            </a>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="w-full rounded-full bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
+                    >
+                        {{ content.bookingSubmitLabel }}
+                    </button>
+                </form>
+                <div class="space-y-4">
+                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.pricingTitle }}
+                        </p>
+                        <ul class="mt-4 space-y-2 text-sm text-[var(--ink)]/80">
+                            <li class="flex items-center justify-between">
+                                <span>{{ content.basePriceLabel }}</span>
+                                <span>{{ formatCurrency(pricing.base) }}</span>
+                            </li>
+                            <li class="flex items-center justify-between">
+                                <span>{{ content.extraGuestLabel }} 2</span>
+                                <span>{{ formatCurrency(pricing.extra2) }}</span>
+                            </li>
+                            <li class="flex items-center justify-between">
+                                <span>{{ content.extraGuestLabel }} 3</span>
+                                <span>{{ formatCurrency(pricing.extra3) }}</span>
+                            </li>
+                            <li class="flex items-center justify-between">
+                                <span>{{ content.extraGuestLabel }} 4</span>
+                                <span>{{ formatCurrency(pricing.extra4) }}</span>
+                            </li>
+                        </ul>
+                        <div class="mt-4 border-t border-black/10 pt-4">
+                            <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.totalLabel }}
+                            </p>
+                            <p class="mt-2 text-2xl font-semibold text-[var(--ink)]" style="font-family: var(--font-display);">
+                                {{ formatCurrency(pricing.totalForGuests) }}
+                            </p>
+                            <p class="mt-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                {{ content.perNightLabel }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </Dialog>
     </div>
@@ -318,11 +422,25 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    auth: {
+        type: Object,
+        default: null,
+    },
 });
 
 const language = ref('en');
 const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
+const isAuthenticated = computed(() => Boolean(props.auth?.user));
+const bookingModalOpen = ref(false);
+const bookingForm = reactive({
+    arrival: '',
+    departure: '',
+    guests: 1,
+    name: '',
+    email: '',
+    notes: '',
+});
 
 const onScroll = () => {
     scrollY.value = window.scrollY || 0;
@@ -391,6 +509,7 @@ const content = computed(() => {
         guestsLabel: formatCount(props.apartment?.max_guests ?? 0, language.value === 'it' ? 'ospite' : 'guest', language.value === 'it' ? 'ospiti' : 'guests'),
         airbnbUrl: props.apartment?.airbnb_url ?? null,
         bookingUrl: props.apartment?.booking_url ?? null,
+        vrboUrl: props.apartment?.vrbo_url ?? null,
         contactEmail: contactEmail || null,
         contactPhone: contactPhone || null,
         whatsappUrl: whatsappUrl || null,
@@ -434,8 +553,28 @@ const content = computed(() => {
         bookingBody: language.value === 'it'
             ? 'Puoi usare i link ufficiali oppure contattarci per una richiesta dedicata.'
             : 'Use the official links or contact us for a tailored request.',
+        bookingModalCta: language.value === 'it' ? 'Richiedi disponibilita' : 'Request availability',
+        bookingModalTitle: language.value === 'it' ? 'Richiesta prenotazione' : 'Booking request',
         arrivalLabel: language.value === 'it' ? 'Arrivo' : 'Arrival date',
         departureLabel: language.value === 'it' ? 'Partenza' : 'Departure date',
+        nameLabel: language.value === 'it' ? 'Nome' : 'Name',
+        emailLabel: language.value === 'it' ? 'Email' : 'Email',
+        notesLabel: language.value === 'it' ? 'Note' : 'Notes',
+        guestsFormLabel: language.value === 'it' ? 'Ospiti' : 'Guests',
+        bookingSubmitLabel: language.value === 'it' ? 'Invia richiesta' : 'Send request',
+        loginCta: language.value === 'it' ? 'Accedi' : 'Sign in',
+        registerPrompt: language.value === 'it'
+            ? 'Non hai un account o sei gia registrato?'
+            : 'No account yet or already registered?',
+        registerCta: language.value === 'it' ? 'Registrati' : 'Create account',
+        pricingTitle: language.value === 'it' ? 'Prezzi per notte' : 'Nightly pricing',
+        basePriceLabel: language.value === 'it' ? 'Prezzo base (1 ospite)' : 'Base price (1 guest)',
+        extraGuestLabel: language.value === 'it' ? 'Supplemento ospite' : 'Extra guest',
+        totalLabel: language.value === 'it' ? 'Totale ospiti' : 'Guest total',
+        perNightLabel: language.value === 'it' ? 'Per notte' : 'Per night',
+        pricingNote: language.value === 'it'
+            ? 'Il prezzo finale puo variare in base al periodo.'
+            : 'Final pricing may vary depending on the season.',
         contactTitle: language.value === 'it' ? 'Contatti' : 'Contact',
         contactHeadline: language.value === 'it'
             ? 'Scrivici per il tuo soggiorno.'
@@ -471,6 +610,34 @@ const content = computed(() => {
             },
     };
 });
+
+const pricing = computed(() => {
+    const base = Number(props.apartment?.base_price ?? 0);
+    const extra2 = Number(props.apartment?.extra_guest_price_2 ?? 0);
+    const extra3 = Number(props.apartment?.extra_guest_price_3 ?? 0);
+    const extra4 = Number(props.apartment?.extra_guest_price_4 ?? 0);
+    const extraPrices = [extra2, extra3, extra4];
+    const extras = extraPrices.slice(0, Math.max(0, bookingForm.guests - 1));
+    const totalForGuests = base + extras.reduce((sum, price) => sum + price, 0);
+
+    return {
+        base,
+        extra2,
+        extra3,
+        extra4,
+        totalForGuests,
+    };
+});
+
+const guestOptions = computed(() => {
+    const maxGuests = Math.min(Number(props.apartment?.max_guests ?? 4), 4);
+    return Array.from({ length: maxGuests }, (_, index) => index + 1);
+});
+
+const formatCurrency = (value) => new Intl.NumberFormat(language.value === 'it' ? 'it-IT' : 'en-US', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number.isFinite(value) ? value : 0);
 
 const heroImage = computed(() => props.apartment?.cover_image_url ?? null);
 
@@ -559,3 +726,9 @@ const openModal = (key) => {
     modals[key] = true;
 };
 </script>
+
+<style scoped>
+button {
+    cursor: pointer;
+}
+</style>

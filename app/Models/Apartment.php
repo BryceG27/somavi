@@ -41,8 +41,13 @@ class Apartment extends Model
         'whatsapp_url',
         'airbnb_url',
         'booking_url',
+        'vrbo_url',
         'airbnb_api_key',
         'booking_api_key',
+        'base_price',
+        'extra_guest_price_2',
+        'extra_guest_price_3',
+        'extra_guest_price_4',
     ];
 
     /**
@@ -51,6 +56,10 @@ class Apartment extends Model
     protected $casts = [
         'airbnb_api_key' => 'encrypted',
         'booking_api_key' => 'encrypted',
+        'base_price' => 'decimal:2',
+        'extra_guest_price_2' => 'decimal:2',
+        'extra_guest_price_3' => 'decimal:2',
+        'extra_guest_price_4' => 'decimal:2',
     ];
 
     public function attachments(): HasMany

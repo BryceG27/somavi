@@ -41,6 +41,11 @@ class ApartmentSeeder extends Seeder
                 'whatsapp_url' => null,
                 'airbnb_url' => 'https://www.airbnb.com',
                 'booking_url' => 'https://www.booking.com',
+                'vrbo_url' => 'https://www.vrbo.com',
+                'base_price' => 40,
+                'extra_guest_price_2' => 35,
+                'extra_guest_price_3' => 30,
+                'extra_guest_price_4' => 25,
             ]
         );
     }

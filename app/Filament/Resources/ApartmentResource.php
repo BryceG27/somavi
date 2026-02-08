@@ -119,6 +119,35 @@ class ApartmentResource extends Resource
                             ])
                             ->columnSpanFull(),
                     ]),
+                Forms\Components\Section::make('Prezzi')
+                    ->schema([
+                        Forms\Components\TextInput::make('base_price')
+                            ->label('Prezzo base (1 ospite)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€')
+                            ->required(),
+                        Forms\Components\TextInput::make('extra_guest_price_2')
+                            ->label('Supplemento 2° ospite')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€'),
+                        Forms\Components\TextInput::make('extra_guest_price_3')
+                            ->label('Supplemento 3° ospite')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€'),
+                        Forms\Components\TextInput::make('extra_guest_price_4')
+                            ->label('Supplemento 4° ospite')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€'),
+                    ])
+                    ->columns(2),
                 Forms\Components\Section::make('Integrazioni')
                     ->schema([
                         Forms\Components\TextInput::make('airbnb_url')
@@ -127,6 +156,10 @@ class ApartmentResource extends Resource
                             ->maxLength(255),
                         Forms\Components\TextInput::make('booking_url')
                             ->label('Booking URL')
+                            ->url()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('vrbo_url')
+                            ->label('Vrbo URL')
                             ->url()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('airbnb_api_key')

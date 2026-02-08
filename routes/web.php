@@ -1,9 +1,14 @@
 <?php
 
+use Inertia\Inertia;
 use App\Models\Apartment;
+use App\Models\User;
+use App\Models\UserGroup;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     $apartment = Apartment::query()
@@ -15,7 +20,12 @@ Route::get('/', function () {
         ->first();
 
     if (! $apartment) {
-        return Inertia::render('Home', ['apartment' => null]);
+        return Inertia::render('Home', [
+            'apartment' => null,
+            'auth' => [
+                'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email']) : null,
+            ],
+        ]);
     }
 
     $cover = $apartment->attachments
@@ -56,16 +66,139 @@ Route::get('/', function () {
             'whatsapp_url' => $apartment->whatsapp_url,
             'airbnb_url' => $apartment->airbnb_url,
             'booking_url' => $apartment->booking_url,
-            'cover_image_url' => $cover ? Storage::disk('public')->url($cover->path) : null,
+            'vrbo_url' => $apartment->vrbo_url,
+            'base_price' => $apartment->base_price,
+            'extra_guest_price_2' => $apartment->extra_guest_price_2,
+            'extra_guest_price_3' => $apartment->extra_guest_price_3,
+            'extra_guest_price_4' => $apartment->extra_guest_price_4,
+            'cover_image_url' => $cover ? Storage::disk('public_root')->url($cover->path) : null,
             'images' => $apartment->attachments
                 ->where('attachment_type', 'image')
                 ->values()
                 ->map(fn ($attachment) => [
                     'id' => $attachment->id,
-                    'url' => Storage::disk('public')->url($attachment->path),
+                    'url' => Storage::disk('public_root')->url($attachment->path),
                     'is_cover' => $attachment->is_cover,
                     'sort_order' => $attachment->sort_order,
                 ]),
         ],
+        'auth' => [
+            'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email']) : null,
+        ],
     ]);
+});
+
+Route::get('/area-privata', function () {
+    return Inertia::render('PrivateArea', [
+        'auth' => [
+            'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email', 'phone']) : null,
+        ],
+    ]);
+})->middleware('auth');
+
+Route::post('/area-privata/profile', function (Request $request) {
+    $user = $request->user();
+
+    abort_unless($user, 403);
+
+    $data = $request->validate([
+        'name' => ['nullable', 'string', 'max:255'],
+        'surname' => ['nullable', 'string', 'max:255'],
+        'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+        'phone' => ['nullable', 'string', 'max:255'],
+    ]);
+
+    $user->update($data);
+
+    return back();
+})->middleware('auth');
+
+Route::get('/login', function () {
+    if (Auth::check()) {
+        return redirect('/area-privata');
+    }
+
+    return Inertia::render('Login');
+})->name('login');
+
+Route::post('/login', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required'],
+    ]);
+
+    if (Auth::attempt($credentials, true)) {
+        $request->session()->regenerate();
+
+        return redirect()->intended('/area-privata');
+    }
+
+    return back()->withErrors([
+        'email' => 'Credenziali non valide.',
+    ]);
+});
+
+Route::get('/register', function () {
+    if (Auth::check()) {
+        return redirect('/area-privata');
+    }
+
+    return Inertia::render('Register');
+});
+
+Route::post('/register', function (Request $request) {
+    $data = $request->validate([
+        'name' => ['nullable', 'string', 'max:255'],
+        'surname' => ['nullable', 'string', 'max:255'],
+        'email' => ['required', 'email', 'unique:users,email'],
+        'password' => ['required', 'min:8', 'confirmed'],
+    ]);
+
+    $group = UserGroup::firstOrCreate(
+        ['slug' => UserGroup::CUSTOMER_SLUG],
+        ['name' => 'Customer'],
+    );
+
+    $name = trim((string) ($data['name'] ?? ''));
+    $surname = trim((string) ($data['surname'] ?? ''));
+    $fallbackName = strtok($data['email'], '@') ?: 'Cliente';
+
+    $user = User::create([
+        'name' => $name !== '' ? $name : ucfirst($fallbackName),
+        'surname' => $surname !== '' ? $surname : 'Cliente',
+        'email' => $data['email'],
+        'password' => $data['password'],
+        'user_group_id' => $group->id,
+    ]);
+
+    Auth::login($user);
+
+    return redirect('/area-privata');
+});
+
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/');
+});
+
+Route::get('/fresh-deploy', function() {
+    Artisan::call('migrate:refresh --step --seed');
+});
+
+Route::get('/storage-link', function() {
+    Artisan::call('storage:link');
+});
+
+Route::get('/get-routes', function() {
+    Artisan::call('route:list');
+
+    dd(Artisan::output());
+});
+
+Route::get('/patch', function() {
+    Artisan::call('vendor:publish --tag=livewire:assets --force');
+    Artisan::call('optimize:clear');
 });
