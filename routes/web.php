@@ -2,13 +2,21 @@
 
 use Inertia\Inertia;
 use App\Models\Apartment;
+use App\Models\BlockedDate;
+use App\Models\Payment;
+use App\Models\Reservation;
 use App\Models\User;
 use App\Models\UserGroup;
+use App\Jobs\CheckExternalAvailability;
+use App\Http\Controllers\StripeController;
+use App\Services\StripeCheckoutService;
+use App\Services\ReservationCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 
 Route::get('/', function () {
     $apartment = Apartment::query()
@@ -89,10 +97,31 @@ Route::get('/', function () {
 });
 
 Route::get('/area-privata', function () {
+    $user = Auth::user();
+
     return Inertia::render('PrivateArea', [
         'auth' => [
-            'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email', 'phone']) : null,
+            'user' => $user ? $user->only(['id', 'name', 'surname', 'email', 'phone']) : null,
         ],
+        'reservations' => $user
+            ? $user->reservations()
+                ->with('apartment')
+                ->orderBy('start_date')
+                ->get()
+                ->map(fn ($reservation) => [
+                    'id' => $reservation->id,
+                    'status' => $reservation->status,
+                    'start_date' => $reservation->start_date?->toDateString(),
+                    'end_date' => $reservation->end_date?->toDateString(),
+                    'total' => (float) $reservation->total,
+                    'total_paid' => (float) $reservation->total_paid,
+                    'apartment' => [
+                        'name_it' => $reservation->apartment?->name_it,
+                        'name_en' => $reservation->apartment?->name_en,
+                    ],
+                ])
+                ->values()
+            : [],
     ]);
 })->middleware('auth');
 
@@ -138,6 +167,203 @@ Route::post('/login', function (Request $request) {
     ]);
 });
 
+Route::post('/booking-request', function (Request $request) {
+    $authUser = $request->user();
+
+    if ($authUser) {
+        if ($authUser->userGroup?->slug !== UserGroup::CUSTOMER_SLUG) {
+            return back()->withErrors([
+                'email' => 'Accesso non autorizzato.',
+            ]);
+        }
+
+        $request->merge(['email' => $authUser->email]);
+    }
+
+    $data = $request->validate([
+        'apartment_id' => ['required', 'exists:apartments,id'],
+        'email' => ['required', 'email'],
+        'name' => ['nullable', 'string', 'max:255'],
+        'surname' => ['nullable', 'string', 'max:255'],
+        'start_date' => ['required', 'date'],
+        'end_date' => ['required', 'date', 'after:start_date'],
+        'guests_count' => ['required', 'integer', 'min:1'],
+        'notes' => ['nullable', 'string'],
+        'payment_plan' => ['nullable', 'in:full,split'],
+        'payment_locale' => ['nullable', 'string', 'max:5'],
+    ]);
+
+    $startDate = Carbon::parse($data['start_date']);
+    $endDate = Carbon::parse($data['end_date']);
+
+    $overlapExists = Reservation::query()
+        ->where('apartment_id', $data['apartment_id'])
+        ->whereIn('status', [Reservation::STATUS_PENDING, Reservation::STATUS_CONFIRMED])
+        ->where(function ($query) use ($startDate, $endDate) {
+            $query
+                ->where('start_date', '<', $endDate)
+                ->where('end_date', '>', $startDate);
+        })
+        ->exists();
+
+    $blockedExists = BlockedDate::query()
+        ->where('apartment_id', $data['apartment_id'])
+        ->where('start_date', '<', $endDate)
+        ->where('end_date', '>', $startDate)
+        ->exists();
+
+    if ($overlapExists || $blockedExists) {
+        return back()->withErrors([
+            'start_date' => 'Periodo non disponibile.',
+        ]);
+    }
+
+    $customerGroup = UserGroup::query()->firstOrCreate(
+        ['slug' => UserGroup::CUSTOMER_SLUG],
+        ['name' => 'Customer'],
+    );
+
+    $email = strtolower(trim((string) $data['email']));
+    $name = trim((string) ($data['name'] ?? ''));
+    $surname = trim((string) ($data['surname'] ?? ''));
+
+    $user = $authUser ?: User::query()->where('email', $email)->first();
+
+    if ($user && $user->userGroup?->slug !== UserGroup::CUSTOMER_SLUG) {
+        return back()->withErrors([
+            'email' => 'Accesso non autorizzato.',
+        ]);
+    }
+
+    if (! $user) {
+        $user = User::create([
+            'name' => $name,
+            'surname' => $surname,
+            'email' => $email,
+            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+            'user_group_id' => $customerGroup->id,
+        ]);
+    } else {
+        $updates = [];
+
+        if ($name !== '' && $user->name === '') {
+            $updates['name'] = $name;
+        }
+
+        if ($surname !== '' && $user->surname === '') {
+            $updates['surname'] = $surname;
+        }
+
+        if ($updates) {
+            $user->update($updates);
+        }
+    }
+
+    $apartment = Apartment::query()->findOrFail($data['apartment_id']);
+
+    $base = (float) ($apartment->base_price ?? 0);
+    $extras = [
+        (float) ($apartment->extra_guest_price_2 ?? 0),
+        (float) ($apartment->extra_guest_price_3 ?? 0),
+        (float) ($apartment->extra_guest_price_4 ?? 0),
+    ];
+    $extraCount = max(0, $data['guests_count'] - 1);
+    $perNight = $base + array_sum(array_slice($extras, 0, $extraCount));
+    $nights = max(1, $startDate->diffInDays($endDate));
+    $subtotal = $perNight * $nights;
+
+    $reservation = Reservation::create([
+        'customer_id' => $user->id,
+        'apartment_id' => $apartment->id,
+        'status' => Reservation::STATUS_PENDING,
+        'guests_count' => $data['guests_count'],
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'subtotal' => $subtotal,
+        'discount_percent' => 0,
+        'total' => $subtotal,
+        'total_paid' => 0,
+        'notes' => $data['notes'] ?? null,
+    ]);
+
+    CheckExternalAvailability::dispatch($reservation->id);
+
+    $paymentPlan = $data['payment_plan'] ?? 'full';
+    $locale = $data['payment_locale'] ?? null;
+    $currency = config('services.stripe.currency', 'eur');
+
+    if ($paymentPlan === 'split') {
+        $depositAmount = round($subtotal * 0.30, 2);
+        $balanceAmount = round($subtotal - $depositAmount, 2);
+
+        $reservation->payments()->create([
+            'provider' => 'stripe',
+            'step' => \App\Models\Payment::STEP_DEPOSIT,
+            'status' => \App\Models\Payment::STATUS_PENDING,
+            'amount' => $depositAmount,
+            'currency' => $currency,
+            'locale' => $locale,
+        ]);
+
+        $reservation->payments()->create([
+            'provider' => 'stripe',
+            'step' => \App\Models\Payment::STEP_BALANCE,
+            'status' => \App\Models\Payment::STATUS_PENDING,
+            'amount' => $balanceAmount,
+            'currency' => $currency,
+            'due_at' => $startDate->copy()->subDays(7),
+            'locale' => $locale,
+        ]);
+    } else {
+        $reservation->payments()->create([
+            'provider' => 'stripe',
+            'step' => \App\Models\Payment::STEP_FULL,
+            'status' => \App\Models\Payment::STATUS_PENDING,
+            'amount' => $subtotal,
+            'currency' => $currency,
+            'locale' => $locale,
+        ]);
+    }
+
+    $payment = $reservation->payments()
+        ->where('status', \App\Models\Payment::STATUS_PENDING)
+        ->orderByRaw("case when step = 'deposit' then 0 when step = 'balance' then 1 else 2 end")
+        ->first();
+
+    try {
+        $session = app(StripeCheckoutService::class)
+            ->createSession($payment->load('reservation.customer'));
+
+        $payment->forceFill([
+            'stripe_checkout_session_id' => $session['id'],
+        ])->save();
+
+        return Inertia::location($session['url']);
+    } catch (\Throwable $exception) {
+        return back()->withErrors([
+            'payment_plan' => 'Pagamento non disponibile. Riprova piu tardi.',
+        ]);
+    }
+});
+
+Route::post('/payments/stripe/checkout/{reservation}', [StripeController::class, 'checkout']);
+Route::post('/stripe/webhook', [StripeController::class, 'webhook'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::post('/reservations/{reservation}/cancel', function (Request $request, Reservation $reservation) {
+    $user = $request->user();
+
+    abort_unless($user, 403);
+
+    if ($user->userGroup?->slug !== UserGroup::CUSTOMER_SLUG || $user->id !== $reservation->customer_id) {
+        abort(403, 'Accesso non autorizzato');
+    }
+
+    app(ReservationCancellationService::class)->cancelByCustomer($reservation);
+
+    return back();
+})->middleware('auth');
+
 Route::get('/register', function () {
     if (Auth::check()) {
         return redirect('/area-privata');
@@ -150,7 +376,7 @@ Route::post('/register', function (Request $request) {
     $data = $request->validate([
         'name' => ['nullable', 'string', 'max:255'],
         'surname' => ['nullable', 'string', 'max:255'],
-        'email' => ['required', 'email', 'unique:users,email'],
+        'email' => ['required', 'email'],
         'password' => ['required', 'min:8', 'confirmed'],
     ]);
 
@@ -163,13 +389,30 @@ Route::post('/register', function (Request $request) {
     $surname = trim((string) ($data['surname'] ?? ''));
     $fallbackName = strtok($data['email'], '@') ?: 'Cliente';
 
-    $user = User::create([
-        'name' => $name !== '' ? $name : ucfirst($fallbackName),
-        'surname' => $surname !== '' ? $surname : 'Cliente',
-        'email' => $data['email'],
-        'password' => $data['password'],
-        'user_group_id' => $group->id,
-    ]);
+    $user = User::query()->where('email', $data['email'])->first();
+
+    if ($user && $user->userGroup?->slug !== UserGroup::CUSTOMER_SLUG) {
+        return back()->withErrors([
+            'email' => 'Accesso non autorizzato.',
+        ]);
+    }
+
+    if ($user) {
+        $user->update([
+            'name' => $name !== '' ? $name : $user->name,
+            'surname' => $surname !== '' ? $surname : $user->surname,
+            'password' => $data['password'],
+            'user_group_id' => $group->id,
+        ]);
+    } else {
+        $user = User::create([
+            'name' => $name !== '' ? $name : ucfirst($fallbackName),
+            'surname' => $surname !== '' ? $surname : 'Cliente',
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'user_group_id' => $group->id,
+        ]);
+    }
 
     Auth::login($user);
 

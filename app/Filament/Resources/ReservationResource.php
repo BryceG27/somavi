@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReservationResource\Pages;
 use App\Models\Reservation;
+use App\Services\ReservationCancellationService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -22,13 +23,19 @@ class ReservationResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Dettagli prenotazione')
                     ->schema([
+                        Forms\Components\TextInput::make('customer_email')
+                            ->label('Email cliente')
+                            ->email()
+                            ->required(fn (string $context) => $context === 'create')
+                            ->visible(fn (string $context) => $context === 'create'),
                         Forms\Components\Select::make('customer_id')
                             ->label('Cliente')
                             ->relationship('customer', 'email')
                             ->searchable()
                             ->preload()
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name.' <'.$record->email.'>')
-                            ->required(),
+                            ->required(fn (string $context) => $context !== 'create')
+                            ->visible(fn (string $context) => $context !== 'create'),
                         Forms\Components\Select::make('apartment_id')
                             ->label('Appartamento')
                             ->relationship('apartment', 'name_it')
@@ -50,10 +57,70 @@ class ReservationResource extends Resource
                             ->required(),
                         Forms\Components\DatePicker::make('start_date')
                             ->label('Da')
-                            ->required(),
+                            ->required()
+                            ->rule(function (callable $get) {
+                                return function (string $attribute, $value, callable $fail) use ($get): void {
+                                    if (! $value || ! $get('end_date') || ! $get('apartment_id')) {
+                                        return;
+                                    }
+
+                                    $start = \Illuminate\Support\Carbon::parse($value);
+                                    $end = \Illuminate\Support\Carbon::parse($get('end_date'));
+
+                                    $hasOverlap = \App\Models\Reservation::query()
+                                        ->where('apartment_id', $get('apartment_id'))
+                                        ->whereIn('status', [
+                                            \App\Models\Reservation::STATUS_PENDING,
+                                            \App\Models\Reservation::STATUS_CONFIRMED,
+                                        ])
+                                        ->where('start_date', '<', $end)
+                                        ->where('end_date', '>', $start)
+                                        ->exists();
+
+                                    $hasBlocked = \App\Models\BlockedDate::query()
+                                        ->where('apartment_id', $get('apartment_id'))
+                                        ->where('start_date', '<', $end)
+                                        ->where('end_date', '>', $start)
+                                        ->exists();
+
+                                    if ($hasOverlap || $hasBlocked) {
+                                        $fail('Periodo non disponibile.');
+                                    }
+                                };
+                            }),
                         Forms\Components\DatePicker::make('end_date')
                             ->label('A')
-                            ->required(),
+                            ->required()
+                            ->rule(function (callable $get) {
+                                return function (string $attribute, $value, callable $fail) use ($get): void {
+                                    if (! $value || ! $get('start_date') || ! $get('apartment_id')) {
+                                        return;
+                                    }
+
+                                    $start = \Illuminate\Support\Carbon::parse($get('start_date'));
+                                    $end = \Illuminate\Support\Carbon::parse($value);
+
+                                    $hasOverlap = \App\Models\Reservation::query()
+                                        ->where('apartment_id', $get('apartment_id'))
+                                        ->whereIn('status', [
+                                            \App\Models\Reservation::STATUS_PENDING,
+                                            \App\Models\Reservation::STATUS_CONFIRMED,
+                                        ])
+                                        ->where('start_date', '<', $end)
+                                        ->where('end_date', '>', $start)
+                                        ->exists();
+
+                                    $hasBlocked = \App\Models\BlockedDate::query()
+                                        ->where('apartment_id', $get('apartment_id'))
+                                        ->where('start_date', '<', $end)
+                                        ->where('end_date', '>', $start)
+                                        ->exists();
+
+                                    if ($hasOverlap || $hasBlocked) {
+                                        $fail('Periodo non disponibile.');
+                                    }
+                                };
+                            }),
                         Forms\Components\Toggle::make('is_paid')
                             ->label('Pagato completamente'),
                         Forms\Components\TextInput::make('subtotal')
@@ -144,6 +211,11 @@ class ReservationResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('cancel_and_refund')
+                    ->label('Annulla e rimborsa')
+                    ->requiresConfirmation()
+                    ->visible(fn (Reservation $record) => $record->status !== Reservation::STATUS_CANCELLED)
+                    ->action(fn (Reservation $record) => app(ReservationCancellationService::class)->cancelByAdmin($record)),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

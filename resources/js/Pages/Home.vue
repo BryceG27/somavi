@@ -11,7 +11,7 @@
                 <nav class="flex items-center justify-between py-5 text-white">
                     <div class="flex items-center gap-4">
                         <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 text-xs font-semibold uppercase tracking-[0.3em]">
-                            AV
+                            SM
                         </div>
                         <div>
                             <p class="text-xs uppercase tracking-[0.35em] text-white/70">
@@ -23,10 +23,10 @@
                         </div>
                     </div>
                     <div class="hidden items-center gap-8 text-xs font-semibold uppercase tracking-[0.3em] md:flex">
-                        <a href="#spazi" class="transition hover:text-white/70">{{ content.nav.spaces }}</a>
-                        <a href="#galleria" class="transition hover:text-white/70">{{ content.nav.gallery }}</a>
-                        <a href="#prenota" class="transition hover:text-white/70">{{ content.nav.booking }}</a>
-                        <a href="#contatti" class="transition hover:text-white/70">{{ content.nav.contact }}</a>
+                        <a href="#spaces" class="transition hover:text-white/70">{{ content.nav.spaces }}</a>
+                        <a href="#gallery" class="transition hover:text-white/70">{{ content.nav.gallery }}</a>
+                        <a href="#booking" class="transition hover:text-white/70">{{ content.nav.booking }}</a>
+                        <a href="#contact" class="transition hover:text-white/70">{{ content.nav.contact }}</a>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="relative">
@@ -79,7 +79,7 @@
                             v-if="content.primaryCta"
                             :label="content.primaryCta"
                             icon="pi pi-eye"
-                            @click="openModal('spazi')"
+                            @click="openModal('spaces')"
                             class="!rounded-full !border-transparent !bg-white !px-6 !py-3 !text-black"
                         />
                         <a
@@ -112,7 +112,7 @@
                 </div>
             </section>
 
-            <section id="spazi" class="mx-auto w-[90%] max-w-6xl pb-20 mt-7">
+            <section id="spaces" class="mx-auto w-[90%] max-w-6xl pb-20 mt-7">
                 <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                     <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
                         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.spacesTitle }}</p>
@@ -155,7 +155,7 @@
                 </div>
             </section>
 
-            <section id="galleria" class="mx-auto w-[90%] max-w-6xl pb-20">
+            <section id="gallery" class="mx-auto w-[90%] max-w-6xl pb-20">
                 <div class="flex flex-wrap items-end justify-between gap-6 text-[var(--ink)]">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.galleryTitle }}</p>
@@ -187,7 +187,7 @@
                 </div>
             </section>
 
-            <section id="prenota" class="mx-auto w-[90%] max-w-6xl pb-20">
+            <section id="booking" class="mx-auto w-[90%] max-w-6xl pb-20">
                 <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-(--ink)">
                     <div class="flex flex-wrap items-center justify-between gap-6">
                         <div>
@@ -195,11 +195,19 @@
                             <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
                                 {{ content.bookingHeadline }}
                             </h2>
-                            <p class="mt-4 max-w-xl text-sm text-[rgba(30,27,23,0.8)]">
-                                {{ content.bookingBody }}
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap gap-3" v-show="false">
+                        <p class="mt-4 max-w-xl text-sm text-[rgba(30,27,23,0.8)]">
+                            {{ content.bookingBody }}
+                        </p>
+                        <button
+                            type="button"
+                            class="mt-6 inline-flex items-center gap-3 rounded-full bg-[var(--terracotta)] px-7 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--terracotta)]/30 transition hover:-translate-y-0.5"
+                            @click="bookingModalOpen = true"
+                        >
+                            {{ content.bookingModalCta }}
+                            <span class="text-base">→</span>
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-3" v-show="false">
                             <a
                                 v-if="content.airbnbUrl"
                                 :href="content.airbnbUrl"
@@ -244,7 +252,7 @@
                 </div>
             </section>
 
-            <section id="contatti" class="mx-auto w-[90%] max-w-6xl pb-24">
+            <section id="contact" class="mx-auto w-[90%] max-w-6xl pb-24">
                 <div class="grid gap-8 rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)] lg:grid-cols-[1.2fr_0.8fr]">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">{{ content.contactTitle }}</p>
@@ -254,6 +262,40 @@
                         <p class="mt-4 text-sm text-[color:rgba(30,27,23,0.8)]">
                             {{ content.contactBody }}
                         </p>
+                        <div v-if="content.airbnbUrl || content.bookingUrl || content.vrboUrl" class="mt-6">
+                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                {{ content.portalsLabel }}
+                            </p>
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <a
+                                    v-if="content.airbnbUrl"
+                                    :href="content.airbnbUrl"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="rounded-full border border-black/15 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+                                >
+                                    Airbnb
+                                </a>
+                                <a
+                                    v-if="content.bookingUrl"
+                                    :href="content.bookingUrl"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="rounded-full border border-black/15 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+                                >
+                                    Booking
+                                </a>
+                                <a
+                                    v-if="content.vrboUrl"
+                                    :href="content.vrboUrl"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="rounded-full border border-black/15 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+                                >
+                                    Vrbo
+                                </a>
+                            </div>
+                        </div>
                     </div>
                     <div class="rounded-2xl border border-black/10 bg-white p-6">
                         <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">Info rapide</p>
@@ -321,53 +363,88 @@
             }"
         >
             <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-                <form class="space-y-5 pt-4">
+                <form class="space-y-5 pt-4" @submit.prevent="submitBooking">
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                             {{ content.arrivalLabel }}
-                            <input v-model="bookingForm.arrival" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            <input v-model="bookingForm.start_date" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            <span v-if="bookingForm.errors.start_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                {{ bookingForm.errors.start_date }}
+                            </span>
                         </label>
                         <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                             {{ content.departureLabel }}
-                            <input v-model="bookingForm.departure" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            <input v-model="bookingForm.end_date" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            <span v-if="bookingForm.errors.end_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                {{ bookingForm.errors.end_date }}
+                            </span>
                         </label>
                     </div>
                     <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                         {{ content.guestsFormLabel }}
-                        <select v-model.number="bookingForm.guests" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
+                        <select v-model.number="bookingForm.guests_count" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
                             <option v-for="count in guestOptions" :key="count" :value="count">
                                 {{ count }}
                             </option>
                         </select>
+                        <span v-if="bookingForm.errors.guests_count" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                            {{ bookingForm.errors.guests_count }}
+                        </span>
                     </label>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.nameLabel }}
-                            <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                    <div class="space-y-3 text-[color:rgba(30,27,23,0.75)]">
+                        <p class="text-xs font-semibold uppercase tracking-[0.3em]">{{ content.paymentPlanLabel }}</p>
+                        <label class="flex items-center gap-3 text-sm">
+                            <input v-model="bookingForm.payment_plan" type="radio" value="full" class="h-4 w-4 accent-[var(--terracotta)]" />
+                            <span>{{ content.paymentFullLabel }}</span>
                         </label>
+                        <label class="flex items-center gap-3 text-sm">
+                            <input v-model="bookingForm.payment_plan" type="radio" value="split" class="h-4 w-4 accent-[var(--terracotta)]" />
+                            <span>{{ content.paymentSplitLabel }}</span>
+                        </label>
+                        <p v-if="bookingForm.payment_plan === 'split'" class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                            {{ content.paymentSplitHint }}
+                        </p>
+                    </div>
+                    <div v-if="isAuthenticated" class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-6 text-center">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                            <i class="pi pi-check text-lg"></i>
+                        </div>
+                        <p class="mt-3 text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                            {{ content.authenticatedLabel }}
+                        </p>
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.nameLabel }}
+                                <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            </label>
+                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.surnameLabel }}
+                                <input v-model="bookingForm.surname" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            </label>
+                        </div>
                         <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                             {{ content.emailLabel }}
-                            <input v-model="bookingForm.email" type="email" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                            <input
+                                v-model="bookingForm.email"
+                                type="email"
+                                required
+                                class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                            />
+                            <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                {{ bookingForm.errors.email }}
+                            </span>
                         </label>
                     </div>
                     <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                         {{ content.notesLabel }}
                         <textarea v-model="bookingForm.notes" rows="4" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"></textarea>
                     </label>
-                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                        <p>{{ content.registerPrompt }}</p>
-                        <div class="mt-3 flex flex-wrap gap-3 text-[11px] font-semibold">
-                            <a href="/register" class="rounded-full border border-black/15 px-4 py-2">
-                                {{ content.registerCta }}
-                            </a>
-                            <a href="/login" class="rounded-full border border-black/15 px-4 py-2">
-                                {{ content.loginCta }}
-                            </a>
-                        </div>
-                    </div>
                     <button
-                        type="button"
+                        type="submit"
                         class="w-full rounded-full bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
+                        :disabled="bookingForm.processing"
                     >
                         {{ content.bookingSubmitLabel }}
                     </button>
@@ -384,15 +461,15 @@
                             </li>
                             <li class="flex items-center justify-between">
                                 <span>{{ content.extraGuestLabel }} 2</span>
-                                <span>{{ formatCurrency(pricing.extra2) }}</span>
+                                <span>+ {{ formatCurrency(pricing.extra2) }}</span>
                             </li>
                             <li class="flex items-center justify-between">
                                 <span>{{ content.extraGuestLabel }} 3</span>
-                                <span>{{ formatCurrency(pricing.extra3) }}</span>
+                                <span>+ {{ formatCurrency(pricing.extra3) }}</span>
                             </li>
                             <li class="flex items-center justify-between">
                                 <span>{{ content.extraGuestLabel }} 4</span>
-                                <span>{{ formatCurrency(pricing.extra4) }}</span>
+                                <span>+ {{ formatCurrency(pricing.extra4) }}</span>
                             </li>
                         </ul>
                         <div class="mt-4 border-t border-black/10 pt-4">
@@ -407,6 +484,22 @@
                             </p>
                         </div>
                     </div>
+                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-[color:rgba(30,27,23,0.75)]">
+                        <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                            <span>{{ content.nightsLabel }}</span>
+                            <span>{{ bookingNights }}</span>
+                        </div>
+                        <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                            <span>{{ content.perNightLabel }}</span>
+                            <span>{{ formatCurrency(pricing.totalForGuests) }}</span>
+                        </div>
+                        <div class="mt-4 border-t border-black/10 pt-3">
+                            <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                <span>{{ content.totalStayLabel }}</span>
+                                <span>{{ formatCurrency(bookingTotal) }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Dialog>
@@ -414,8 +507,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
+import { Head, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     apartment: {
@@ -433,13 +526,17 @@ const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
 const isAuthenticated = computed(() => Boolean(props.auth?.user));
 const bookingModalOpen = ref(false);
-const bookingForm = reactive({
-    arrival: '',
-    departure: '',
-    guests: 1,
+const bookingForm = useForm({
+    apartment_id: props.apartment?.id ?? null,
+    start_date: '',
+    end_date: '',
+    guests_count: 1,
     name: '',
+    surname: '',
     email: '',
     notes: '',
+    payment_plan: 'full',
+    payment_locale: '',
 });
 
 const onScroll = () => {
@@ -472,6 +569,24 @@ onUnmounted(() => {
     window.removeEventListener('scroll', onScroll);
 });
 
+watch(
+    () => props.auth?.user?.email,
+    (value) => {
+        if (value) {
+            bookingForm.email = value;
+        }
+    },
+    { immediate: true },
+);
+
+watch(
+    () => language.value,
+    (value) => {
+        bookingForm.payment_locale = value;
+    },
+    { immediate: true },
+);
+
 const pickLocalized = (base, fallback = '') => {
     if (!props.apartment) {
         return fallback;
@@ -480,6 +595,24 @@ const pickLocalized = (base, fallback = '') => {
     const key = `${base}_${language.value}`;
 
     return props.apartment[key] || props.apartment[`${base}_it`] || fallback;
+};
+
+const submitBooking = () => {
+    if (props.auth?.user?.email) {
+        bookingForm.email = props.auth.user.email;
+    }
+
+    bookingForm.post('/booking-request', {
+        onSuccess: () => {
+            const fields = ['start_date', 'end_date', 'guests_count', 'name', 'surname', 'notes'];
+            if (!props.auth?.user?.email) {
+                fields.push('email');
+            }
+            bookingForm.reset(...fields);
+            bookingForm.payment_plan = 'full';
+            bookingModalOpen.value = false;
+        },
+    });
 };
 
 const content = computed(() => {
@@ -560,17 +693,23 @@ const content = computed(() => {
         nameLabel: language.value === 'it' ? 'Nome' : 'Name',
         emailLabel: language.value === 'it' ? 'Email' : 'Email',
         notesLabel: language.value === 'it' ? 'Note' : 'Notes',
+        surnameLabel: language.value === 'it' ? 'Cognome' : 'Last name',
         guestsFormLabel: language.value === 'it' ? 'Ospiti' : 'Guests',
         bookingSubmitLabel: language.value === 'it' ? 'Invia richiesta' : 'Send request',
+        authenticatedLabel: language.value === 'it' ? 'Autenticato' : 'Authenticated',
         loginCta: language.value === 'it' ? 'Accedi' : 'Sign in',
-        registerPrompt: language.value === 'it'
-            ? 'Non hai un account o sei gia registrato?'
-            : 'No account yet or already registered?',
-        registerCta: language.value === 'it' ? 'Registrati' : 'Create account',
+        paymentPlanLabel: language.value === 'it' ? 'Pagamento' : 'Payment',
+        paymentFullLabel: language.value === 'it' ? 'Paga tutto subito' : 'Pay in full now',
+        paymentSplitLabel: language.value === 'it' ? '30% ora, 70% piu avanti' : '30% now, 70% later',
+        paymentSplitHint: language.value === 'it'
+            ? 'Saldo entro 7 giorni prima del check-in.'
+            : 'Balance due 7 days before check-in.',
         pricingTitle: language.value === 'it' ? 'Prezzi per notte' : 'Nightly pricing',
         basePriceLabel: language.value === 'it' ? 'Prezzo base (1 ospite)' : 'Base price (1 guest)',
         extraGuestLabel: language.value === 'it' ? 'Supplemento ospite' : 'Extra guest',
         totalLabel: language.value === 'it' ? 'Totale ospiti' : 'Guest total',
+        nightsLabel: language.value === 'it' ? 'Notti' : 'Nights',
+        totalStayLabel: language.value === 'it' ? 'Totale soggiorno' : 'Stay total',
         perNightLabel: language.value === 'it' ? 'Per notte' : 'Per night',
         pricingNote: language.value === 'it'
             ? 'Il prezzo finale puo variare in base al periodo.'
@@ -582,6 +721,7 @@ const content = computed(() => {
         contactBody: language.value === 'it'
             ? 'Rispondiamo rapidamente per aiutarti con disponibilita e consigli locali.'
             : 'We reply quickly with availability and local tips.',
+        portalsLabel: language.value === 'it' ? 'Portali' : 'Portals',
         nav: language.value === 'it'
             ? {
                 spaces: 'Spazi',
@@ -617,7 +757,7 @@ const pricing = computed(() => {
     const extra3 = Number(props.apartment?.extra_guest_price_3 ?? 0);
     const extra4 = Number(props.apartment?.extra_guest_price_4 ?? 0);
     const extraPrices = [extra2, extra3, extra4];
-    const extras = extraPrices.slice(0, Math.max(0, bookingForm.guests - 1));
+    const extras = extraPrices.slice(0, Math.max(0, bookingForm.guests_count - 1));
     const totalForGuests = base + extras.reduce((sum, price) => sum + price, 0);
 
     return {
@@ -628,6 +768,21 @@ const pricing = computed(() => {
         totalForGuests,
     };
 });
+
+const bookingNights = computed(() => {
+    if (!bookingForm.start_date || !bookingForm.end_date) {
+        return 0;
+    }
+
+    const start = new Date(bookingForm.start_date);
+    const end = new Date(bookingForm.end_date);
+    const diffMs = end.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    return diffDays > 0 ? diffDays : 0;
+});
+
+const bookingTotal = computed(() => pricing.value.totalForGuests * bookingNights.value);
 
 const guestOptions = computed(() => {
     const maxGuests = Math.min(Number(props.apartment?.max_guests ?? 4), 4);
@@ -655,21 +810,21 @@ const galleryImages = computed(() => props.apartment?.images ?? []);
 
 const infoCards = computed(() => [
     {
-        key: 'spazi',
+        key: 'spaces',
         title: language.value === 'it' ? 'La Casa' : 'The Home',
         summary: language.value === 'it'
             ? 'Spazi curati, pensati per vivere Palermo con calma.'
             : 'Thoughtful spaces designed for a calm Palermo stay.',
     },
     {
-        key: 'servizi',
+        key: 'comfort',
         title: language.value === 'it' ? 'Comfort' : 'Comfort',
         summary: language.value === 'it'
             ? 'Cucina, aree comuni e dettagli essenziali.'
             : 'Kitchen, shared areas, and essential details.',
     },
     {
-        key: 'quartiere',
+        key: 'neighborhood',
         title: language.value === 'it' ? 'Quartiere' : 'Neighborhood',
         summary: language.value === 'it'
             ? 'Indirizzo strategico, tutto raggiungibile a piedi.'
@@ -678,7 +833,7 @@ const infoCards = computed(() => [
 ]);
 
 const modalCopy = computed(() => ({
-    spazi: {
+    spaces: {
         title: language.value === 'it' ? 'La Casa' : 'The Home',
         subtitle: language.value === 'it'
             ? 'Spazi semplici, caldi, autentici.'
@@ -690,7 +845,7 @@ const modalCopy = computed(() => ({
             ? ['Ambienti luminosi', 'Layout funzionale', 'Atmosfera rilassata']
             : ['Bright rooms', 'Functional layout', 'Relaxed atmosphere'],
     },
-    servizi: {
+    comfort: {
         title: language.value === 'it' ? 'Comfort' : 'Comfort',
         subtitle: language.value === 'it'
             ? 'Dettagli che semplificano il soggiorno.'
@@ -702,7 +857,7 @@ const modalCopy = computed(() => ({
             ? ['Cucina completa', 'Spazi funzionali', 'Dettagli essenziali']
             : ['Full kitchen', 'Functional spaces', 'Essential details'],
     },
-    quartiere: {
+    neighborhood: {
         title: language.value === 'it' ? 'Quartiere' : 'Neighborhood',
         subtitle: language.value === 'it'
             ? 'Cuore storico e ritmi locali.'
@@ -717,9 +872,9 @@ const modalCopy = computed(() => ({
 }));
 
 const modals = reactive({
-    spazi: false,
-    servizi: false,
-    quartiere: false,
+    spaces: false,
+    comfort: false,
+    neighborhood: false,
 });
 
 const openModal = (key) => {

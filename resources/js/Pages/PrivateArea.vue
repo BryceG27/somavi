@@ -79,7 +79,38 @@
                 <div class="mt-4 grid gap-6 lg:grid-cols-2">
                     <div>
                         <h2 class="text-2xl font-semibold" style="font-family: var(--font-display);">{{ copy.bookingsTitle }}</h2>
-                        <div class="mt-6 space-y-4">
+                        <div v-if="upcomingReservations.length" class="mt-6 space-y-4">
+                            <div
+                                v-for="reservation in upcomingReservations"
+                                :key="reservation.id"
+                                class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5"
+                            >
+                                <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                    {{ reservationTitle(reservation) }}
+                                </p>
+                                <p class="mt-3 text-sm text-[color:rgba(30,27,23,0.75)]">
+                                    {{ formatDate(reservation.start_date) }} → {{ formatDate(reservation.end_date) }}
+                                </p>
+                                <p class="mt-2 text-sm text-[color:rgba(30,27,23,0.75)]">
+                                    {{ formatCurrency(reservation.total) }}
+                                </p>
+                                <span
+                                    class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em]"
+                                    :class="reservationStatusClass(reservation.status)"
+                                >
+                                    {{ reservationStatusLabel(reservation.status) }}
+                                </span>
+                                <button
+                                    v-if="reservation.status !== 'cancelled'"
+                                    type="button"
+                                    class="mt-4 rounded-full border border-black/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] hover:bg-[color:rgba(0,0,0,0.05)]"
+                                    @click="cancelReservation(reservation.id)"
+                                >
+                                    {{ copy.cancelReservation }}
+                                </button>
+                            </div>
+                        </div>
+                        <div v-else class="mt-6 space-y-4">
                             <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5">
                                 <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">{{ copy.noBookingTitle }}</p>
                                 <p class="mt-3 text-sm text-[color:rgba(30,27,23,0.75)]">
@@ -90,7 +121,30 @@
                     </div>
                     <div>
                         <h2 class="text-2xl font-semibold" style="font-family: var(--font-display);">{{ copy.staysTitle }}</h2>
-                        <div class="mt-6 space-y-4">
+                        <div v-if="pastReservations.length" class="mt-6 space-y-4">
+                            <div
+                                v-for="reservation in pastReservations"
+                                :key="reservation.id"
+                                class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5"
+                            >
+                                <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                    {{ reservationTitle(reservation) }}
+                                </p>
+                                <p class="mt-3 text-sm text-[color:rgba(30,27,23,0.75)]">
+                                    {{ formatDate(reservation.start_date) }} → {{ formatDate(reservation.end_date) }}
+                                </p>
+                                <p class="mt-2 text-sm text-[color:rgba(30,27,23,0.75)]">
+                                    {{ formatCurrency(reservation.total) }}
+                                </p>
+                                <span
+                                    class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em]"
+                                    :class="reservationStatusClass(reservation.status)"
+                                >
+                                    {{ reservationStatusLabel(reservation.status) }}
+                                </span>
+                            </div>
+                        </div>
+                        <div v-else class="mt-6 space-y-4">
                             <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5">
                                 <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">{{ copy.noStaysTitle }}</p>
                                 <p class="mt-3 text-sm text-[color:rgba(30,27,23,0.75)]">
@@ -113,6 +167,10 @@ const props = defineProps({
     auth: {
         type: Object,
         default: null,
+    },
+    reservations: {
+        type: Array,
+        default: () => [],
     },
 });
 
@@ -153,6 +211,73 @@ const submitProfile = () => {
     profileForm.post('/area-privata/profile');
 };
 
+const cancelReservation = (reservationId) => {
+    if (!window.confirm(copy.value.cancelConfirm)) {
+        return;
+    }
+
+    router.post(`/reservations/${reservationId}/cancel`);
+};
+
+const formatDate = (value) => {
+    if (!value) {
+        return '-';
+    }
+
+    const locale = language.value === 'it' ? 'it-IT' : 'en-US';
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(value));
+};
+
+const formatCurrency = (value) => new Intl.NumberFormat(language.value === 'it' ? 'it-IT' : 'en-US', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number.isFinite(value) ? value : 0);
+
+const isFutureReservation = (reservation) => {
+    if (!reservation?.start_date) {
+        return false;
+    }
+
+    return new Date(reservation.start_date) >= new Date();
+};
+
+const upcomingReservations = computed(() => props.reservations.filter((reservation) => isFutureReservation(reservation)));
+const pastReservations = computed(() => props.reservations.filter((reservation) => !isFutureReservation(reservation)));
+
+const reservationTitle = (reservation) => {
+    if (!reservation?.apartment) {
+        return '';
+    }
+
+    return language.value === 'it'
+        ? reservation.apartment.name_it
+        : reservation.apartment.name_en || reservation.apartment.name_it;
+};
+
+const reservationStatusLabel = (status) => {
+    if (status === 'confirmed') {
+        return language.value === 'it' ? 'Confermata' : 'Confirmed';
+    }
+
+    if (status === 'cancelled') {
+        return language.value === 'it' ? 'Cancellata' : 'Cancelled';
+    }
+
+    return language.value === 'it' ? 'In attesa' : 'Pending';
+};
+
+const reservationStatusClass = (status) => {
+    if (status === 'confirmed') {
+        return 'bg-emerald-100 text-emerald-700';
+    }
+
+    if (status === 'cancelled') {
+        return 'bg-rose-100 text-rose-700';
+    }
+
+    return 'bg-amber-100 text-amber-700';
+};
+
 const copy = computed(() => (language.value === 'it'
     ? {
         pageTitle: 'Area Privata',
@@ -175,9 +300,10 @@ const copy = computed(() => (language.value === 'it'
         bookingsKicker: 'Prenotazioni',
         bookingsTitle: 'Il tuo prossimo soggiorno',
         staysTitle: 'I tuoi soggiorni',
+        cancelReservation: 'Annulla prenotazione',
+        cancelConfirm: 'Vuoi annullare questa prenotazione?',
         noBookingTitle: 'Nessuna prenotazione attiva',
         noBookingBody: 'Quando effettuerai una prenotazione, la vedrai apparire qui con i dettagli del soggiorno.',
-        requestAvailability: 'Richiedi disponibilita',
         noStaysTitle: 'Nessun soggiorno passato',
         noStaysBody: 'Quando avrai soggiornato, troverai qui il riepilogo delle tue esperienze.',
     }
@@ -202,9 +328,10 @@ const copy = computed(() => (language.value === 'it'
         bookingsKicker: 'Bookings',
         bookingsTitle: 'Your next stay',
         staysTitle: 'Your stays',
+        cancelReservation: 'Cancel reservation',
+        cancelConfirm: 'Do you want to cancel this reservation?',
         noBookingTitle: 'No active bookings',
         noBookingBody: 'When you book a stay, it will appear here with all the details.',
-        requestAvailability: 'Request availability',
         noStaysTitle: 'No past stays',
         noStaysBody: 'After your stay, you will find a summary of your experiences here.',
     }
