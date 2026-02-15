@@ -33,6 +33,9 @@ Route::get('/', function () {
             'auth' => [
                 'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email']) : null,
             ],
+            'blocked_dates' => [],
+            'reservations' => [],
+            'app_url' => rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/'),
         ]);
     }
 
@@ -93,7 +96,60 @@ Route::get('/', function () {
         'auth' => [
             'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email']) : null,
         ],
+        'blocked_dates' => $apartment->blockedDates()
+            ->orderBy('start_date')
+            ->get()
+            ->map(fn ($blockedDate) => [
+                'start_date' => $blockedDate->start_date?->toDateString(),
+                'end_date' => $blockedDate->end_date?->toDateString(),
+            ]),
+        'reservations' => $apartment->reservations()
+            ->whereIn('status', [Reservation::STATUS_PENDING, Reservation::STATUS_CONFIRMED])
+            ->orderBy('start_date')
+            ->get()
+            ->map(fn ($reservation) => [
+                'start_date' => $reservation->start_date?->toDateString(),
+                'end_date' => $reservation->end_date?->toDateString(),
+            ]),
+        'app_url' => rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/'),
     ]);
+});
+
+Route::get('/robots.txt', function () {
+    $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
+
+    $lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /login',
+        'Disallow: /register',
+        'Disallow: /area-privata',
+        "Sitemap: {$baseUrl}/sitemap.xml",
+    ];
+
+    return response(implode("\n", $lines), 200)
+        ->header('Content-Type', 'text/plain');
+});
+
+Route::get('/sitemap.xml', function () {
+    $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
+    $lastmod = now()->toDateString();
+    $url = "{$baseUrl}/";
+
+    $xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{$url}</loc>
+    <lastmod>{$lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+XML;
+
+    return response($xml, 200)
+        ->header('Content-Type', 'application/xml');
 });
 
 Route::get('/area-privata', function () {

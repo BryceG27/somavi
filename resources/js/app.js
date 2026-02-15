@@ -3,8 +3,6 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import PrimeVue from 'primevue/config';
-import Dialog from 'primevue/dialog';
-import Button from 'primevue/button';
 import Aura from '@primeuix/themes/aura';
 import 'primeicons/primeicons.css';
 
@@ -15,9 +13,17 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) });
 
         app.use(plugin);
-        app.use(PrimeVue, { ripple: true, theme: { preset: Aura } });
-        app.component('Dialog', Dialog);
-        app.component('PButton', Button);
+        app.use(PrimeVue, { 
+            ripple: true, 
+            theme: {
+                preset: Aura,
+                options: {
+                    prefix: 'p',
+                    darkModeSelector: '.my-app-dark',
+                    cssLayer: false
+                }
+            },
+        });
 
         app.mount(el);
     },

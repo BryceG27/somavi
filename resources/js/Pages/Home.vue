@@ -1,6 +1,19 @@
 <template>
     <div class="min-h-screen">
-        <Head :title="content.name" />
+        <Head :title="content.name">
+            <meta name="description" :content="seoDescription" />
+            <meta name="robots" content="index, follow" />
+            <link v-if="canonicalUrl" rel="canonical" :href="canonicalUrl" />
+            <meta property="og:title" :content="content.name" />
+            <meta property="og:description" :content="seoDescription" />
+            <meta property="og:type" content="website" />
+            <meta v-if="canonicalUrl" property="og:url" :content="canonicalUrl" />
+            <meta v-if="seoImage" property="og:image" :content="seoImage" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" :content="content.name" />
+            <meta name="twitter:description" :content="seoDescription" />
+            <meta v-if="seoImage" name="twitter:image" :content="seoImage" />
+        </Head>
 
         <header
             class="fixed top-0 left-0 right-0 z-20 transition-colors duration-300"
@@ -75,7 +88,7 @@
                         {{ content.heroBody || content.description }}
                     </p>
                     <div class="mt-10 flex flex-wrap items-center gap-4">
-                        <PButton
+                        <Button
                             v-if="content.primaryCta"
                             :label="content.primaryCta"
                             icon="pi pi-eye"
@@ -84,7 +97,7 @@
                         />
                         <a
                             v-if="content.secondaryCta"
-                            href="#prenota"
+                            href="#booking"
                             class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-white"
                         >
                             {{ content.secondaryCta }}
@@ -175,7 +188,7 @@
                     >
                         <img
                             :src="image.url"
-                            alt=""
+                            :alt="content.galleryImageAlt"
                             class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                             loading="lazy"
                         />
@@ -188,8 +201,8 @@
             </section>
 
             <section id="booking" class="mx-auto w-[90%] max-w-6xl pb-20">
-                <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-(--ink)">
-                    <div class="flex flex-wrap items-center justify-between gap-6">
+                <div class="rounded-[2.5rem] border border-black/10 bg-white p-10 text-[var(--ink)]">
+                    <div class="flex flex-wrap items-start justify-between gap-6">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[rgba(30,27,23,0.7)]">{{ content.bookingTitle }}</p>
                             <h2 class="mt-3 text-3xl font-semibold" style="font-family: var(--font-display);">
@@ -198,16 +211,8 @@
                         <p class="mt-4 max-w-xl text-sm text-[rgba(30,27,23,0.8)]">
                             {{ content.bookingBody }}
                         </p>
-                        <button
-                            type="button"
-                            class="mt-6 inline-flex items-center gap-3 rounded-full bg-[var(--terracotta)] px-7 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-[var(--terracotta)]/30 transition hover:-translate-y-0.5"
-                            @click="bookingModalOpen = true"
-                        >
-                            {{ content.bookingModalCta }}
-                            <span class="text-base">→</span>
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap gap-3" v-show="false">
+                        </div>
+                        <div class="flex flex-wrap gap-3" v-show="false">
                             <a
                                 v-if="content.airbnbUrl"
                                 :href="content.airbnbUrl"
@@ -238,16 +243,174 @@
 
                         </div>
                     </div>
-                    <div
-                        v-if="content.checkInText || content.checkOutText"
-                        class="mt-6 flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.8)]"
-                    >
-                        <span v-if="content.checkInText" class="rounded-full border border-black/15 px-4 py-2">
-                            {{ content.checkInText }}
-                        </span>
-                        <span v-if="content.checkOutText" class="rounded-full border border-black/15 px-4 py-2">
-                            {{ content.checkOutText }}
-                        </span>
+                    <div class="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+                        <form class="space-y-5" @submit.prevent="submitBooking">
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.arrivalLabel }}
+                                    <DatePicker
+                                        v-model="startDateValue"
+                                        :min-date="startMinDate"
+                                        :disabled-dates="disabledStartDates"
+                                        :manual-input="false"
+                                        show-icon
+                                        date-format="dd/mm/yy"
+                                        input-class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                        class="w-full"
+                                    />
+                                    <span v-if="bookingForm.errors.start_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                        {{ bookingForm.errors.start_date }}
+                                    </span>
+                                </label>
+                                <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.departureLabel }}
+                                    <DatePicker
+                                        v-model="endDateValue"
+                                        :min-date="endMinDate"
+                                        :disabled-dates="disabledEndDates"
+                                        :manual-input="false"
+                                        show-icon
+                                        date-format="dd/mm/yy"
+                                        input-class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                        class="w-full"
+                                    />
+                                    <span v-if="bookingForm.errors.end_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                        {{ bookingForm.errors.end_date }}
+                                    </span>
+                                </label>
+                            </div>
+                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.guestsFormLabel }}
+                                <select v-model.number="bookingForm.guests_count" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
+                                    <option v-for="count in guestOptions" :key="count" :value="count">
+                                        {{ count }}
+                                    </option>
+                                </select>
+                                <span v-if="bookingForm.errors.guests_count" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                    {{ bookingForm.errors.guests_count }}
+                                </span>
+                            </label>
+                            <div class="space-y-3 text-[color:rgba(30,27,23,0.75)]">
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em]">{{ content.paymentPlanLabel }}</p>
+                                <label class="flex items-center gap-3 text-sm">
+                                    <input v-model="bookingForm.payment_plan" type="radio" value="full" class="h-4 w-4 accent-[var(--terracotta)]" />
+                                    <span>{{ content.paymentFullLabel }}</span>
+                                </label>
+                                <label class="flex items-center gap-3 text-sm">
+                                    <input v-model="bookingForm.payment_plan" type="radio" value="split" class="h-4 w-4 accent-[var(--terracotta)]" />
+                                    <span>{{ content.paymentSplitLabel }}</span>
+                                </label>
+                                <p v-if="bookingForm.payment_plan === 'split'" class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                    {{ content.paymentSplitHint }}
+                                </p>
+                            </div>
+                            <div v-if="isAuthenticated" class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-6 text-center">
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                                    <i class="pi pi-check text-lg"></i>
+                                </div>
+                                <p class="mt-3 text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.authenticatedLabel }}
+                                </p>
+                            </div>
+                            <div v-else class="space-y-4">
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                        {{ content.nameLabel }}
+                                        <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                                    </label>
+                                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                        {{ content.surnameLabel }}
+                                        <input v-model="bookingForm.surname" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                                    </label>
+                                </div>
+                                <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.emailLabel }}
+                                    <input
+                                        v-model="bookingForm.email"
+                                        type="email"
+                                        required
+                                        class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                    />
+                                    <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                        {{ bookingForm.errors.email }}
+                                    </span>
+                                </label>
+                            </div>
+                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.notesLabel }}
+                                <textarea v-model="bookingForm.notes" rows="4" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"></textarea>
+                            </label>
+                            <button
+                                type="submit"
+                                class="w-full rounded-full bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
+                                :disabled="bookingForm.processing"
+                            >
+                                {{ content.bookingSubmitLabel }}
+                            </button>
+                            <div
+                                v-if="content.checkInText || content.checkOutText"
+                                class="mt-3 grid gap-3 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.8)] md:grid-cols-2"
+                            >
+                                <span v-if="content.checkInText" class="block w-full rounded-full border border-black/15 px-4 py-2">
+                                    {{ content.checkInText }}
+                                </span>
+                                <span v-if="content.checkOutText" class="block w-full rounded-full border border-black/15 px-4 py-2">
+                                    {{ content.checkOutText }}
+                                </span>
+                            </div>
+                        </form>
+                        <div class="space-y-4">
+                            <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5">
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.pricingTitle }}
+                                </p>
+                                <ul class="mt-4 space-y-2 text-sm text-[var(--ink)]/80">
+                                    <li class="flex items-center justify-between">
+                                        <span>{{ content.basePriceLabel }}</span>
+                                        <span>{{ formatCurrency(pricing.base) }}</span>
+                                    </li>
+                                    <li class="flex items-center justify-between">
+                                        <span>{{ content.extraGuestLabel }} 2</span>
+                                        <span>+ {{ formatCurrency(pricing.extra2) }}</span>
+                                    </li>
+                                    <li class="flex items-center justify-between">
+                                        <span>{{ content.extraGuestLabel }} 3</span>
+                                        <span>+ {{ formatCurrency(pricing.extra3) }}</span>
+                                    </li>
+                                    <li class="flex items-center justify-between">
+                                        <span>{{ content.extraGuestLabel }} 4</span>
+                                        <span>+ {{ formatCurrency(pricing.extra4) }}</span>
+                                    </li>
+                                </ul>
+                                <div class="mt-4 border-t border-black/10 pt-4">
+                                    <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                        {{ content.totalLabel }}
+                                    </p>
+                                    <p class="mt-2 text-2xl font-semibold text-[var(--ink)]" style="font-family: var(--font-display);">
+                                        {{ formatCurrency(pricing.totalForGuests) }}
+                                    </p>
+                                    <p class="mt-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                        {{ content.perNightLabel }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-[color:rgba(30,27,23,0.75)]">
+                                <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                    <span>{{ content.nightsLabel }}</span>
+                                    <span>{{ bookingNights }}</span>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                    <span>{{ content.perNightLabel }}</span>
+                                    <span>{{ formatCurrency(pricing.totalForGuests) }}</span>
+                                </div>
+                                <div class="mt-4 border-t border-black/10 pt-3">
+                                    <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                        <span>{{ content.totalStayLabel }}</span>
+                                        <span>{{ formatCurrency(bookingTotal) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -350,165 +513,17 @@
             </div>
         </Dialog>
 
-        <Dialog
-            v-model:visible="bookingModalOpen"
-            modal
-            :header="content.bookingModalTitle"
-            class="w-5xl"
-            :pt="{
-                root: { class: 'rounded-[2.5rem] overflow-hidden' },
-                header: { class: 'bg-white text-[var(--ink)] border-b border-black/10' },
-                content: { class: 'bg-white text-[var(--ink)]' },
-                footer: { class: 'bg-white text-[var(--ink)]' },
-            }"
-        >
-            <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-                <form class="space-y-5 pt-4" @submit.prevent="submitBooking">
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.arrivalLabel }}
-                            <input v-model="bookingForm.start_date" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                            <span v-if="bookingForm.errors.start_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
-                                {{ bookingForm.errors.start_date }}
-                            </span>
-                        </label>
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.departureLabel }}
-                            <input v-model="bookingForm.end_date" type="date" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                            <span v-if="bookingForm.errors.end_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
-                                {{ bookingForm.errors.end_date }}
-                            </span>
-                        </label>
-                    </div>
-                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                        {{ content.guestsFormLabel }}
-                        <select v-model.number="bookingForm.guests_count" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
-                            <option v-for="count in guestOptions" :key="count" :value="count">
-                                {{ count }}
-                            </option>
-                        </select>
-                        <span v-if="bookingForm.errors.guests_count" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
-                            {{ bookingForm.errors.guests_count }}
-                        </span>
-                    </label>
-                    <div class="space-y-3 text-[color:rgba(30,27,23,0.75)]">
-                        <p class="text-xs font-semibold uppercase tracking-[0.3em]">{{ content.paymentPlanLabel }}</p>
-                        <label class="flex items-center gap-3 text-sm">
-                            <input v-model="bookingForm.payment_plan" type="radio" value="full" class="h-4 w-4 accent-[var(--terracotta)]" />
-                            <span>{{ content.paymentFullLabel }}</span>
-                        </label>
-                        <label class="flex items-center gap-3 text-sm">
-                            <input v-model="bookingForm.payment_plan" type="radio" value="split" class="h-4 w-4 accent-[var(--terracotta)]" />
-                            <span>{{ content.paymentSplitLabel }}</span>
-                        </label>
-                        <p v-if="bookingForm.payment_plan === 'split'" class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
-                            {{ content.paymentSplitHint }}
-                        </p>
-                    </div>
-                    <div v-if="isAuthenticated" class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-6 text-center">
-                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                            <i class="pi pi-check text-lg"></i>
-                        </div>
-                        <p class="mt-3 text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.authenticatedLabel }}
-                        </p>
-                    </div>
-                    <div v-else class="space-y-4">
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                                {{ content.nameLabel }}
-                                <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                            </label>
-                            <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                                {{ content.surnameLabel }}
-                                <input v-model="bookingForm.surname" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
-                            </label>
-                        </div>
-                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.emailLabel }}
-                            <input
-                                v-model="bookingForm.email"
-                                type="email"
-                                required
-                                class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
-                            />
-                            <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
-                                {{ bookingForm.errors.email }}
-                            </span>
-                        </label>
-                    </div>
-                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                        {{ content.notesLabel }}
-                        <textarea v-model="bookingForm.notes" rows="4" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"></textarea>
-                    </label>
-                    <button
-                        type="submit"
-                        class="w-full rounded-full bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
-                        :disabled="bookingForm.processing"
-                    >
-                        {{ content.bookingSubmitLabel }}
-                    </button>
-                </form>
-                <div class="space-y-4">
-                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] p-5">
-                        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                            {{ content.pricingTitle }}
-                        </p>
-                        <ul class="mt-4 space-y-2 text-sm text-[var(--ink)]/80">
-                            <li class="flex items-center justify-between">
-                                <span>{{ content.basePriceLabel }}</span>
-                                <span>{{ formatCurrency(pricing.base) }}</span>
-                            </li>
-                            <li class="flex items-center justify-between">
-                                <span>{{ content.extraGuestLabel }} 2</span>
-                                <span>+ {{ formatCurrency(pricing.extra2) }}</span>
-                            </li>
-                            <li class="flex items-center justify-between">
-                                <span>{{ content.extraGuestLabel }} 3</span>
-                                <span>+ {{ formatCurrency(pricing.extra3) }}</span>
-                            </li>
-                            <li class="flex items-center justify-between">
-                                <span>{{ content.extraGuestLabel }} 4</span>
-                                <span>+ {{ formatCurrency(pricing.extra4) }}</span>
-                            </li>
-                        </ul>
-                        <div class="mt-4 border-t border-black/10 pt-4">
-                            <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                                {{ content.totalLabel }}
-                            </p>
-                            <p class="mt-2 text-2xl font-semibold text-[var(--ink)]" style="font-family: var(--font-display);">
-                                {{ formatCurrency(pricing.totalForGuests) }}
-                            </p>
-                            <p class="mt-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
-                                {{ content.perNightLabel }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-[color:rgba(30,27,23,0.75)]">
-                        <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
-                            <span>{{ content.nightsLabel }}</span>
-                            <span>{{ bookingNights }}</span>
-                        </div>
-                        <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
-                            <span>{{ content.perNightLabel }}</span>
-                            <span>{{ formatCurrency(pricing.totalForGuests) }}</span>
-                        </div>
-                        <div class="mt-4 border-t border-black/10 pt-3">
-                            <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
-                                <span>{{ content.totalStayLabel }}</span>
-                                <span>{{ formatCurrency(bookingTotal) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Dialog>
     </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
+
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Select from 'primevue/select';
 
 const props = defineProps({
     apartment: {
@@ -519,13 +534,26 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    blocked_dates: {
+        type: Array,
+        default: () => [],
+    },
+    reservations: {
+        type: Array,
+        default: () => [],
+    },
+    app_url: {
+        type: String,
+        default: '',
+    },
 });
 
 const language = ref('en');
 const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
 const isAuthenticated = computed(() => Boolean(props.auth?.user));
-const bookingModalOpen = ref(false);
+const startDateValue = ref(null);
+const endDateValue = ref(null);
 const bookingForm = useForm({
     apartment_id: props.apartment?.id ?? null,
     start_date: '',
@@ -538,6 +566,117 @@ const bookingForm = useForm({
     payment_plan: 'full',
     payment_locale: '',
 });
+
+const startOfDay = (value) => {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const today = ref(startOfDay(new Date()));
+
+const addDays = (date, amount) => {
+    const next = new Date(date);
+    next.setDate(next.getDate() + amount);
+    return next;
+};
+
+const parseDate = (value) => {
+    if (!value) {
+        return null;
+    }
+
+    const [year, month, day] = String(value).split('-').map(Number);
+
+    if (!year || !month || !day) {
+        return null;
+    }
+
+    return new Date(year, month - 1, day);
+};
+
+const formatDateForApi = (date) => {
+    if (!date) {
+        return '';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
+const startMinDate = computed(() => addDays(today.value, 1));
+const endMinDate = computed(() => {
+    if (startDateValue.value) {
+        return addDays(startDateValue.value, 1);
+    }
+
+    return startMinDate.value;
+});
+
+const buildDisabledDates = (ranges, options = {}) => {
+    const includeStart = options.includeStart ?? true;
+    const includeEnd = options.includeEnd ?? false;
+    const timestamps = new Set();
+
+    ranges.forEach((range) => {
+        const start = range?.start;
+        const end = range?.end;
+
+        if (!start || !end) {
+            return;
+        }
+
+        let current = startOfDay(start);
+        let last = startOfDay(end);
+
+        if (!includeStart) {
+            current = addDays(current, 1);
+        }
+
+        if (!includeEnd) {
+            last = addDays(last, -1);
+        }
+
+        if (current > last) {
+            return;
+        }
+
+        while (current <= last) {
+            timestamps.add(current.getTime());
+            current = addDays(current, 1);
+        }
+    });
+
+    return Array.from(timestamps, (time) => new Date(time));
+};
+
+const bookingRanges = computed(() => {
+    const ranges = [];
+    const sources = [...(props.blocked_dates || []), ...(props.reservations || [])];
+
+    sources.forEach((item) => {
+        const start = parseDate(item?.start_date);
+        const end = parseDate(item?.end_date);
+
+        if (!start || !end) {
+            return;
+        }
+
+        if (start >= end) {
+            return;
+        }
+
+        ranges.push({ start, end });
+    });
+
+    return ranges;
+});
+
+const disabledStartDates = computed(() => buildDisabledDates(bookingRanges.value, { includeStart: true, includeEnd: false }));
+const disabledEndDates = computed(() => buildDisabledDates(bookingRanges.value, { includeStart: false, includeEnd: true }));
 
 const onScroll = () => {
     scrollY.value = window.scrollY || 0;
@@ -587,6 +726,54 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => bookingForm.start_date,
+    (value) => {
+        const parsed = parseDate(value);
+        const parsedTime = parsed ? startOfDay(parsed).getTime() : null;
+        const currentTime = startDateValue.value ? startOfDay(startDateValue.value).getTime() : null;
+
+        if (parsedTime !== currentTime) {
+            startDateValue.value = parsed;
+        }
+    },
+    { immediate: true },
+);
+
+watch(
+    () => bookingForm.end_date,
+    (value) => {
+        const parsed = parseDate(value);
+        const parsedTime = parsed ? startOfDay(parsed).getTime() : null;
+        const currentTime = endDateValue.value ? startOfDay(endDateValue.value).getTime() : null;
+
+        if (parsedTime !== currentTime) {
+            endDateValue.value = parsed;
+        }
+    },
+    { immediate: true },
+);
+
+watch(startDateValue, (value) => {
+    const formatted = formatDateForApi(value);
+
+    if (formatted !== bookingForm.start_date) {
+        bookingForm.start_date = formatted;
+    }
+
+    if (value && endDateValue.value && endDateValue.value <= value) {
+        endDateValue.value = null;
+    }
+});
+
+watch(endDateValue, (value) => {
+    const formatted = formatDateForApi(value);
+
+    if (formatted !== bookingForm.end_date) {
+        bookingForm.end_date = formatted;
+    }
+});
+
 const pickLocalized = (base, fallback = '') => {
     if (!props.apartment) {
         return fallback;
@@ -610,10 +797,26 @@ const submitBooking = () => {
             }
             bookingForm.reset(...fields);
             bookingForm.payment_plan = 'full';
-            bookingModalOpen.value = false;
+            startDateValue.value = null;
+            endDateValue.value = null;
         },
     });
 };
+
+const canonicalUrl = computed(() => {
+    const base = (props.app_url || '').trim();
+    if (!base) {
+        return '';
+    }
+    return `${base.replace(/\/$/, '')}/`;
+});
+
+const seoDescription = computed(() => {
+    const raw = (content.value.description || content.value.heroBody || '').trim();
+    return raw.replace(/\s+/g, ' ').slice(0, 160);
+});
+
+const seoImage = computed(() => heroImage.value || '');
 
 const content = computed(() => {
     const fallbackName = 'Somavi';
@@ -679,6 +882,9 @@ const content = computed(() => {
         galleryEmpty: language.value === 'it'
             ? 'Le immagini saranno disponibili a breve.'
             : 'Images will be available soon.',
+        galleryImageAlt: language.value === 'it'
+            ? `Foto di ${pickLocalized('name', fallbackName) || fallbackName}`
+            : `Photo of ${pickLocalized('name', fallbackName) || fallbackName}`,
         bookingTitle: language.value === 'it' ? 'Prenota' : 'Book',
         bookingHeadline: language.value === 'it'
             ? 'Prenota in modo semplice e diretto.'
@@ -686,8 +892,6 @@ const content = computed(() => {
         bookingBody: language.value === 'it'
             ? 'Puoi usare i link ufficiali oppure contattarci per una richiesta dedicata.'
             : 'Use the official links or contact us for a tailored request.',
-        bookingModalCta: language.value === 'it' ? 'Richiedi disponibilita' : 'Request availability',
-        bookingModalTitle: language.value === 'it' ? 'Richiesta prenotazione' : 'Booking request',
         arrivalLabel: language.value === 'it' ? 'Arrivo' : 'Arrival date',
         departureLabel: language.value === 'it' ? 'Partenza' : 'Departure date',
         nameLabel: language.value === 'it' ? 'Nome' : 'Name',

@@ -34,6 +34,17 @@
         </header>
 
         <main class="mx-auto w-[90%] max-w-6xl pb-24 pt-14">
+            <section
+                v-if="paymentState === 'authorized'"
+                class="mb-8 rounded-[2.5rem] border border-amber-200 bg-amber-50 p-6 text-[color:rgba(30,27,23,0.8)]"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-700">
+                    {{ copy.paymentNoticeKicker }}
+                </p>
+                <p class="mt-3 text-sm">
+                    {{ copy.paymentNoticeBody }}
+                </p>
+            </section>
             <section class="rounded-[2.5rem] border border-black/10 bg-white p-10">
                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">{{ copy.detailsKicker }}</p>
                 <h1 class="mt-4 text-3xl font-semibold" style="font-family: var(--font-display);">{{ copy.profileTitle }}</h1>
@@ -175,6 +186,7 @@ const props = defineProps({
 });
 
 const language = ref('en');
+const paymentState = ref('');
 
 const pickDefaultLanguage = () => {
     if (typeof window === 'undefined') {
@@ -194,6 +206,11 @@ const pickDefaultLanguage = () => {
 
 onMounted(() => {
     language.value = pickDefaultLanguage();
+
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        paymentState.value = params.get('payment') || '';
+    }
 });
 
 const logout = () => {
@@ -306,6 +323,8 @@ const copy = computed(() => (language.value === 'it'
         noBookingBody: 'Quando effettuerai una prenotazione, la vedrai apparire qui con i dettagli del soggiorno.',
         noStaysTitle: 'Nessun soggiorno passato',
         noStaysBody: 'Quando avrai soggiornato, troverai qui il riepilogo delle tue esperienze.',
+        paymentNoticeKicker: 'Pagamento ricevuto',
+        paymentNoticeBody: 'Il pagamento e stato autorizzato. Stiamo verificando la disponibilita e ti confermeremo a breve.',
     }
     : {
         pageTitle: 'Private Area',
@@ -334,6 +353,8 @@ const copy = computed(() => (language.value === 'it'
         noBookingBody: 'When you book a stay, it will appear here with all the details.',
         noStaysTitle: 'No past stays',
         noStaysBody: 'After your stay, you will find a summary of your experiences here.',
+        paymentNoticeKicker: 'Payment received',
+        paymentNoticeBody: 'Your payment has been authorized. We are checking availability and will confirm shortly.',
     }
 ));
 </script>

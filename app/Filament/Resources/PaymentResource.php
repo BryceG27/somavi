@@ -48,8 +48,10 @@ class PaymentResource extends Resource
                             ->label('Stato')
                             ->options([
                                 Payment::STATUS_PENDING => 'In attesa',
+                                Payment::STATUS_AUTHORIZED => 'Autorizzato',
                                 Payment::STATUS_PAID => 'Pagato',
                                 Payment::STATUS_REFUNDED => 'Rimborsato',
+                                Payment::STATUS_VOIDED => 'Annullato',
                             ])
                             ->required(),
                         Forms\Components\TextInput::make('amount')

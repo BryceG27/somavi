@@ -12,8 +12,10 @@ class Payment extends Model
     public const STEP_BALANCE = 'balance';
 
     public const STATUS_PENDING = 'pending';
+    public const STATUS_AUTHORIZED = 'authorized';
     public const STATUS_PAID = 'paid';
     public const STATUS_REFUNDED = 'refunded';
+    public const STATUS_VOIDED = 'voided';
 
     /**
      * @var list<string>

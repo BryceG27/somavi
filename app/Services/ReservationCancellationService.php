@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\Reservation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Services\StripePaymentIntentService;
 
 class ReservationCancellationService
 {
@@ -70,6 +71,22 @@ class ReservationCancellationService
 
                     $remaining = round($remaining - $amountToRefund, 2);
                 }
+            }
+
+            $authorizedPayments = $reservation->payments()
+                ->where('status', Payment::STATUS_AUTHORIZED)
+                ->get();
+
+            foreach ($authorizedPayments as $payment) {
+                if (! $payment->stripe_payment_intent_id) {
+                    continue;
+                }
+
+                app(StripePaymentIntentService::class)->cancel($payment->stripe_payment_intent_id);
+
+                $payment->forceFill([
+                    'status' => Payment::STATUS_VOIDED,
+                ])->save();
             }
 
             $reservation->forceFill([

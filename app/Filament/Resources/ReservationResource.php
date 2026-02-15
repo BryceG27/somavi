@@ -3,13 +3,16 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReservationResource\Pages;
+use App\Models\Payment;
 use App\Models\Reservation;
 use App\Services\ReservationCancellationService;
+use App\Services\StripePaymentIntentService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 
 class ReservationResource extends Resource
 {
@@ -211,6 +214,45 @@ class ReservationResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('confirm_and_capture')
+                    ->label('Conferma e incassa')
+                    ->requiresConfirmation()
+                    ->visible(function (Reservation $record): bool {
+                        if ($record->status !== Reservation::STATUS_PENDING) {
+                            return false;
+                        }
+
+                        return $record->payments()
+                            ->where('status', Payment::STATUS_AUTHORIZED)
+                            ->exists();
+                    })
+                    ->action(function (Reservation $record): void {
+                        $payment = $record->payments()
+                            ->where('status', Payment::STATUS_AUTHORIZED)
+                            ->orderByRaw("case when step = 'deposit' then 0 when step = 'balance' then 1 else 2 end")
+                            ->first();
+
+                        if (! $payment || ! $payment->stripe_payment_intent_id) {
+                            return;
+                        }
+
+                        app(StripePaymentIntentService::class)->capture($payment->stripe_payment_intent_id);
+
+                        $payment->forceFill([
+                            'status' => Payment::STATUS_PAID,
+                            'paid_at' => Carbon::now(),
+                        ])->save();
+
+                        $totalPaid = (float) $record->payments()
+                            ->where('status', Payment::STATUS_PAID)
+                            ->sum('amount');
+
+                        $record->forceFill([
+                            'total_paid' => $totalPaid,
+                            'is_paid' => $totalPaid >= (float) $record->total,
+                            'status' => Reservation::STATUS_CONFIRMED,
+                        ])->save();
+                    }),
                 Tables\Actions\Action::make('cancel_and_refund')
                     ->label('Annulla e rimborsa')
                     ->requiresConfirmation()

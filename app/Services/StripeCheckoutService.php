@@ -31,7 +31,7 @@ class StripeCheckoutService
 
         $payload = [
             'mode' => 'payment',
-            'success_url' => config('services.stripe.success_url') ?? url('/area-privata'),
+            'success_url' => config('services.stripe.success_url') ?? url('/area-privata?payment=authorized'),
             'cancel_url' => config('services.stripe.cancel_url') ?? url('/'),
             'customer_email' => $reservation?->customer?->email,
             'line_items' => [
@@ -53,6 +53,7 @@ class StripeCheckoutService
                 'locale' => $payment->locale,
             ],
             'payment_intent_data' => [
+                'capture_method' => 'manual',
                 'metadata' => [
                     'reservation_id' => $reservation?->id,
                     'payment_id' => $payment->id,

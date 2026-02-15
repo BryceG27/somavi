@@ -73,18 +73,59 @@ class StripeController extends Controller
             $payment = Payment::query()->with('reservation')->find($paymentId);
 
             if ($payment) {
-                $this->applyPayment($payment, $session);
+                $this->applyAuthorization($payment, $session);
+            }
+        }
+
+        if (($event['type'] ?? '') === 'payment_intent.succeeded') {
+            $intent = $event['data']['object'] ?? [];
+            $metadata = $intent['metadata'] ?? [];
+            $paymentId = (int) ($metadata['payment_id'] ?? 0);
+
+            $payment = Payment::query()->with('reservation')->find($paymentId);
+
+            if ($payment) {
+                $this->applyPayment($payment, $intent);
+            }
+        }
+
+        if (($event['type'] ?? '') === 'payment_intent.canceled') {
+            $intent = $event['data']['object'] ?? [];
+            $metadata = $intent['metadata'] ?? [];
+            $paymentId = (int) ($metadata['payment_id'] ?? 0);
+
+            $payment = Payment::query()->find($paymentId);
+
+            if ($payment) {
+                $payment->forceFill([
+                    'stripe_payment_intent_id' => $intent['id'] ?? $payment->stripe_payment_intent_id,
+                    'status' => Payment::STATUS_VOIDED,
+                ])->save();
             }
         }
 
         return response('ok', 200);
     }
 
-    private function applyPayment(Payment $payment, array $session): void
+    private function applyAuthorization(Payment $payment, array $session): void
     {
         $payment->forceFill([
             'stripe_checkout_session_id' => $session['id'] ?? $payment->stripe_checkout_session_id,
             'stripe_payment_intent_id' => $session['payment_intent'] ?? $payment->stripe_payment_intent_id,
+            'status' => Payment::STATUS_AUTHORIZED,
+        ])->save();
+    }
+
+    private function applyPayment(Payment $payment, array $session): void
+    {
+        $paymentIntentId = $session['payment_intent'] ?? $session['id'] ?? null;
+        $sessionId = ($session['object'] ?? null) === 'checkout.session'
+            ? ($session['id'] ?? null)
+            : null;
+
+        $payment->forceFill([
+            'stripe_checkout_session_id' => $sessionId ?? $payment->stripe_checkout_session_id,
+            'stripe_payment_intent_id' => $paymentIntentId ?? $payment->stripe_payment_intent_id,
             'status' => Payment::STATUS_PAID,
             'paid_at' => Carbon::now(),
         ])->save();

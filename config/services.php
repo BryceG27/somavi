@@ -43,4 +43,8 @@ return [
         'cancel_url' => env('STRIPE_CANCEL_URL'),
     ],
 
+    'availability' => [
+        'mode' => env('EXTERNAL_AVAILABILITY_MODE', 'manual'),
+    ],
+
 ];
