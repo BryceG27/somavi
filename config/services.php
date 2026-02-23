@@ -44,7 +44,10 @@ return [
     ],
 
     'availability' => [
-        'mode' => env('EXTERNAL_AVAILABILITY_MODE', 'manual'),
+        'mode' => env('EXTERNAL_AVAILABILITY_MODE', 'ics_sync'),
+        'ics_timeout_seconds' => env('EXTERNAL_ICS_TIMEOUT_SECONDS', 10),
+        'cron_token' => env('EXTERNAL_ICS_CRON_TOKEN'),
+        'cron_lock_seconds' => env('EXTERNAL_ICS_CRON_LOCK_SECONDS', 3300),
     ],
 
 ];

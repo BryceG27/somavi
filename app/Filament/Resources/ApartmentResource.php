@@ -151,17 +151,29 @@ class ApartmentResource extends Resource
                 Forms\Components\Section::make('Integrazioni')
                     ->schema([
                         Forms\Components\TextInput::make('airbnb_url')
-                            ->label('Airbnb URL')
+                            ->label('Airbnb Listing URL')
                             ->url()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('airbnb_ical_url')
+                            ->label('Airbnb iCal URL')
+                            ->url()
+                            ->maxLength(2048),
                         Forms\Components\TextInput::make('booking_url')
-                            ->label('Booking URL')
+                            ->label('Booking Listing URL')
                             ->url()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('booking_ical_url')
+                            ->label('Booking iCal URL')
+                            ->url()
+                            ->maxLength(2048),
                         Forms\Components\TextInput::make('vrbo_url')
-                            ->label('Vrbo URL')
+                            ->label('Vrbo Listing URL')
                             ->url()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('vrbo_ical_url')
+                            ->label('Vrbo iCal URL')
+                            ->url()
+                            ->maxLength(2048),
                         Forms\Components\TextInput::make('airbnb_api_key')
                             ->label('Airbnb API Key')
                             ->maxLength(255)

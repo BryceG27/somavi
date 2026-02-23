@@ -22,6 +22,9 @@ class ReservationStatsWidget extends StatsOverviewWidget
             ->where('status', Reservation::STATUS_CONFIRMED)
             ->whereDate('end_date', '>=', $today)
             ->count();
+        $awaitingPaymentReservations = Reservation::query()
+            ->where('status', Reservation::STATUS_AWAITING_PAYMENT)
+            ->count();
         $pendingReservations = Reservation::query()
             ->where('status', Reservation::STATUS_PENDING)
             ->count();
@@ -33,7 +36,8 @@ class ReservationStatsWidget extends StatsOverviewWidget
         return [
             Stat::make('Prenotazioni totali', $totalReservations),
             Stat::make('Prenotazioni attive', $activeReservations),
-            Stat::make('Prenotazioni in attesa', $pendingReservations),
+            Stat::make('In attesa pagamento', $awaitingPaymentReservations),
+            Stat::make('In verifica disponibilita', $pendingReservations),
             Stat::make('Prenotazioni cancellate', $cancelledReservations),
             Stat::make('Clienti', $customersCount),
         ];

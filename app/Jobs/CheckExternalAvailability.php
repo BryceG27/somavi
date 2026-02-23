@@ -2,17 +2,18 @@
 
 namespace App\Jobs;
 
+use App\Models\BlockedDate;
 use App\Models\Payment;
 use App\Models\Reservation;
+use App\Services\ExternalCalendar\ExternalCalendarSyncService;
 use App\Services\ReservationCancellationService;
-use App\Services\StripePaymentIntentService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CheckExternalAvailability implements ShouldQueue
 {
@@ -27,13 +28,14 @@ class CheckExternalAvailability implements ShouldQueue
 
     public function handle(): void
     {
-        $reservation = Reservation::query()->with('apartment')->find($this->reservationId);
+        $reservation = Reservation::query()
+            ->with(['apartment', 'payments'])
+            ->find($this->reservationId);
 
         if (! $reservation) {
             return;
         }
 
-        // TODO: integrare verifica asincrona disponibilita con portali esterni (Airbnb, Booking, Vrbo).
         Log::info('External availability check queued.', [
             'reservation_id' => $reservation->id,
             'apartment_id' => $reservation->apartment_id,
@@ -45,16 +47,14 @@ class CheckExternalAvailability implements ShouldQueue
             return;
         }
 
-        $payment = $reservation->payments()
-            ->where('status', Payment::STATUS_AUTHORIZED)
-            ->orderByRaw("case when step = 'deposit' then 0 when step = 'balance' then 1 else 2 end")
-            ->first();
+        $hasPaidPayment = $reservation->payments
+            ->contains(fn (Payment $payment) => $payment->status === Payment::STATUS_PAID);
 
-        if (! $payment || ! $payment->stripe_payment_intent_id) {
+        if (! $hasPaidPayment) {
             return;
         }
 
-        $availability = $this->resolveAvailability();
+        $availability = $this->resolveAvailability($reservation);
 
         if ($availability === null) {
             return;
@@ -65,29 +65,47 @@ class CheckExternalAvailability implements ShouldQueue
             return;
         }
 
-        app(StripePaymentIntentService::class)->capture($payment->stripe_payment_intent_id);
-
-        $payment->forceFill([
-            'status' => Payment::STATUS_PAID,
-            'paid_at' => Carbon::now(),
-        ])->save();
-
-        $totalPaid = (float) $reservation->payments()->where('status', Payment::STATUS_PAID)->sum('amount');
         $reservation->forceFill([
-            'total_paid' => $totalPaid,
-            'is_paid' => $totalPaid >= (float) $reservation->total,
             'status' => Reservation::STATUS_CONFIRMED,
         ])->save();
     }
 
-    private function resolveAvailability(): ?bool
+    private function resolveAvailability(Reservation $reservation): ?bool
     {
-        $mode = config('services.availability.mode', 'manual');
+        $mode = config('services.availability.mode', 'ics_sync');
 
         return match ($mode) {
             'assume_available' => true,
             'assume_unavailable' => false,
+            'ics_sync' => $this->resolveIcsAvailability($reservation),
             default => null,
         };
+    }
+
+    private function resolveIcsAvailability(Reservation $reservation): ?bool
+    {
+        if (! $reservation->apartment || ! $reservation->start_date || ! $reservation->end_date) {
+            return null;
+        }
+
+        try {
+            app(ExternalCalendarSyncService::class)->syncApartment($reservation->apartment);
+        } catch (Throwable $exception) {
+            Log::warning('External ICS sync failed while checking availability.', [
+                'reservation_id' => $reservation->id,
+                'apartment_id' => $reservation->apartment_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $isBlocked = BlockedDate::query()
+            ->where('apartment_id', $reservation->apartment_id)
+            ->where('start_date', '<', $reservation->end_date)
+            ->where('end_date', '>', $reservation->start_date)
+            ->exists();
+
+        return ! $isBlocked;
     }
 }

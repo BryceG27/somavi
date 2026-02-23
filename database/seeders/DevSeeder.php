@@ -36,6 +36,7 @@ class DevSeeder extends Seeder
                 'surname' => 'User',
                 'password' => Hash::make('password'),
                 'user_group_id' => $adminGroup->id,
+                'preferred_locale' => 'it',
             ],
         );
 
@@ -46,6 +47,7 @@ class DevSeeder extends Seeder
                 'surname' => 'Cliente',
                 'password' => Hash::make('password'),
                 'user_group_id' => $customerGroup->id,
+                'preferred_locale' => 'it',
             ],
         );
 
@@ -62,6 +64,7 @@ class DevSeeder extends Seeder
                 'surname' => 'Rossi',
                 'password' => Hash::make('password'),
                 'user_group_id' => $customerGroup->id,
+                'preferred_locale' => 'it',
             ],
         );
 
@@ -72,6 +75,7 @@ class DevSeeder extends Seeder
                 'surname' => 'Bianchi',
                 'password' => Hash::make('password'),
                 'user_group_id' => $customerGroup->id,
+                'preferred_locale' => 'en',
             ],
         );
 
@@ -117,7 +121,7 @@ class DevSeeder extends Seeder
         $reservationTwo = Reservation::create([
             'customer_id' => $customerTwo->id,
             'apartment_id' => $apartment->id,
-            'status' => Reservation::STATUS_PENDING,
+            'status' => Reservation::STATUS_AWAITING_PAYMENT,
             'guests_count' => 1,
             'start_date' => $today->copy()->addDays(20),
             'end_date' => $today->copy()->addDays(22),
@@ -126,7 +130,7 @@ class DevSeeder extends Seeder
             'discount_percent' => 0,
             'total' => 160,
             'total_paid' => 0,
-            'notes' => 'Richiesta in attesa.',
+            'notes' => 'Richiesta in attesa di pagamento.',
         ]);
 
         Payment::create([

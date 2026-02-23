@@ -26,7 +26,8 @@ class CustomerReservationsRelationManager extends RelationManager
                 Forms\Components\Select::make('status')
                     ->label('Stato')
                     ->options([
-                        Reservation::STATUS_PENDING => 'In attesa',
+                        Reservation::STATUS_AWAITING_PAYMENT => 'In attesa di pagamento',
+                        Reservation::STATUS_PENDING => 'In verifica disponibilita',
                         Reservation::STATUS_CONFIRMED => 'Confermata',
                         Reservation::STATUS_CANCELLED => 'Cancellata',
                     ])
@@ -83,6 +84,7 @@ class CustomerReservationsRelationManager extends RelationManager
                     ->label('Stato')
                     ->badge()
                     ->colors([
+                        'gray' => Reservation::STATUS_AWAITING_PAYMENT,
                         'warning' => Reservation::STATUS_PENDING,
                         'success' => Reservation::STATUS_CONFIRMED,
                         'danger' => Reservation::STATUS_CANCELLED,

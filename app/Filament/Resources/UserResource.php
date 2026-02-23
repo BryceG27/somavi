@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Support\LocalePreference;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -46,6 +47,12 @@ class UserResource extends Resource
                         Forms\Components\TextInput::make('phone')
                             ->label('Telefono')
                             ->maxLength(255),
+                        Forms\Components\Select::make('preferred_locale')
+                            ->label('Lingua preferita')
+                            ->options(self::localeOptions())
+                            ->default(LocalePreference::defaultLocale())
+                            ->searchable()
+                            ->native(false),
                         Forms\Components\Select::make('user_group_id')
                             ->label('Gruppo')
                             ->relationship('userGroup', 'name')
@@ -82,6 +89,10 @@ class UserResource extends Resource
                     ->label('Telefono')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('preferred_locale')
+                    ->label('Lingua')
+                    ->formatStateUsing(fn (?string $state) => self::localeOptions()[$state] ?? strtoupper((string) $state))
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creato')
                     ->dateTime()
@@ -103,5 +114,13 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function localeOptions(): array
+    {
+        return LocalePreference::labels();
     }
 }

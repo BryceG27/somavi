@@ -47,13 +47,14 @@
                                 v-model="language"
                                 class="appearance-none rounded-full border border-white/30 bg-white/10 px-4 py-2 pr-10 text-[11px] font-semibold uppercase tracking-[0.3em] text-white"
                             >
-                                <option value="it">IT</option>
-                                <option value="en">EN</option>
+                                <option v-for="locale in supportedLocales" :key="locale" :value="locale">
+                                    {{ localeOptionLabel(locale) }}
+                                </option>
                             </select>
                             <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/80">▾</span>
                         </div>
                         <a
-                            :href="isAuthenticated ? '/area-privata' : '/login'"
+                            :href="isAuthenticated ? privateAreaUrl : loginUrl"
                             class="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-white/80"
                             aria-label="Area privata"
                         >
@@ -245,6 +246,30 @@
                     </div>
                     <div class="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                         <form class="space-y-5" @submit.prevent="submitBooking">
+                            <div
+                                v-if="bookingErrorList.length"
+                                class="rounded-2xl border border-[var(--terracotta)]/30 bg-[var(--terracotta)]/10 px-5 py-4 text-[var(--ink)]"
+                            >
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em]">
+                                    {{ content.validationErrorTitle }}
+                                </p>
+                                <ul class="mt-2 space-y-1 text-sm">
+                                    <li v-for="(error, index) in bookingErrorList" :key="`${error}-${index}`">
+                                        {{ error }}
+                                    </li>
+                                </ul>
+                            </div>
+                            <div
+                                v-if="bookingNotice === 'guest_registration_required'"
+                                class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-[var(--ink)]"
+                            >
+                                <p v-if="language === 'it'" class="text-sm leading-relaxed">
+                                    Prenotazione effettuata correttamente. Termina la registrazione nell'<a :href="loginUrl" class="font-semibold italic underline underline-offset-2">area privata</a> per controllare le tue prenotazioni.
+                                </p>
+                                <p v-else class="text-sm leading-relaxed">
+                                    Booking completed successfully. Complete your registration in the <a :href="loginUrl" class="font-semibold italic underline underline-offset-2">private area</a> to manage your bookings.
+                                </p>
+                            </div>
                             <div class="grid gap-4 md:grid-cols-2">
                                 <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                     {{ content.arrivalLabel }}
@@ -255,7 +280,7 @@
                                         :manual-input="false"
                                         show-icon
                                         date-format="dd/mm/yy"
-                                        input-class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                        :input-class="inputClass('start_date')"
                                         class="w-full"
                                     />
                                     <span v-if="bookingForm.errors.start_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
@@ -271,7 +296,7 @@
                                         :manual-input="false"
                                         show-icon
                                         date-format="dd/mm/yy"
-                                        input-class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                        :input-class="inputClass('end_date')"
                                         class="w-full"
                                     />
                                     <span v-if="bookingForm.errors.end_date" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
@@ -281,7 +306,7 @@
                             </div>
                             <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                 {{ content.guestsFormLabel }}
-                                <select v-model.number="bookingForm.guests_count" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]">
+                                <select v-model.number="bookingForm.guests_count" :class="inputClass('guests_count')">
                                     <option v-for="count in guestOptions" :key="count" :value="count">
                                         {{ count }}
                                     </option>
@@ -303,6 +328,9 @@
                                 <p v-if="bookingForm.payment_plan === 'split'" class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
                                     {{ content.paymentSplitHint }}
                                 </p>
+                                <span v-if="bookingForm.errors.payment_plan" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                    {{ bookingForm.errors.payment_plan }}
+                                </span>
                             </div>
                             <div v-if="isAuthenticated" class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-6 text-center">
                                 <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -316,11 +344,17 @@
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                         {{ content.nameLabel }}
-                                        <input v-model="bookingForm.name" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                                        <input v-model="bookingForm.name" type="text" :class="inputClass('name')" />
+                                        <span v-if="bookingForm.errors.name" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                            {{ bookingForm.errors.name }}
+                                        </span>
                                     </label>
                                     <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                         {{ content.surnameLabel }}
-                                        <input v-model="bookingForm.surname" type="text" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]" />
+                                        <input v-model="bookingForm.surname" type="text" :class="inputClass('surname')" />
+                                        <span v-if="bookingForm.errors.surname" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                            {{ bookingForm.errors.surname }}
+                                        </span>
                                     </label>
                                 </div>
                                 <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
@@ -329,7 +363,7 @@
                                         v-model="bookingForm.email"
                                         type="email"
                                         required
-                                        class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                        :class="inputClass('email')"
                                     />
                                     <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
                                         {{ bookingForm.errors.email }}
@@ -338,12 +372,18 @@
                             </div>
                             <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                 {{ content.notesLabel }}
-                                <textarea v-model="bookingForm.notes" rows="4" class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"></textarea>
+                                <textarea v-model="bookingForm.notes" rows="4" :class="inputClass('notes')"></textarea>
+                                <span v-if="bookingForm.errors.notes" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                    {{ bookingForm.errors.notes }}
+                                </span>
                             </label>
+                            <span v-if="bookingForm.errors.apartment_id" class="block text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                {{ bookingForm.errors.apartment_id }}
+                            </span>
                             <button
                                 type="submit"
                                 class="w-full rounded-full bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white"
-                                :disabled="bookingForm.processing"
+                                :disabled="bookingForm.processing || !bookingForm.apartment_id"
                             >
                                 {{ content.bookingSubmitLabel }}
                             </button>
@@ -518,12 +558,11 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
-import Select from 'primevue/select';
 
 const props = defineProps({
     apartment: {
@@ -549,9 +588,40 @@ const props = defineProps({
 });
 
 const language = ref('en');
+const page = usePage();
+const localization = computed(() => page.props.localization || {});
+const normalizeLocaleCode = (value) => String(value || '')
+    .toLowerCase()
+    .replace('_', '-')
+    .split('-')[0];
+const supportedLocales = computed(() => {
+    const locales = Array.isArray(localization.value.supported_locales)
+        ? localization.value.supported_locales.map((value) => normalizeLocaleCode(value)).filter(Boolean)
+        : [];
+
+    return locales.length ? [...new Set(locales)] : ['it', 'en'];
+});
+const localeLabels = computed(() => {
+    const labels = localization.value.locale_labels;
+
+    return labels && typeof labels === 'object' ? labels : {};
+});
+const localeOptionLabel = (locale) => localeLabels.value[locale] || locale.toUpperCase();
+const defaultLocale = computed(() => {
+    const locale = normalizeLocaleCode(localization.value.default_locale);
+
+    return supportedLocales.value.includes(locale)
+        ? locale
+        : (supportedLocales.value[0] || 'en');
+});
+const routeUrls = computed(() => page.props.routes || {});
 const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
 const isAuthenticated = computed(() => Boolean(props.auth?.user));
+const loginUrl = computed(() => routeUrls.value.login || '/login');
+const privateAreaUrl = computed(() => routeUrls.value.private_area || '/private-area');
+const bookingRequestUrl = computed(() => routeUrls.value.booking_request || '/booking-request');
+const bookingNotice = computed(() => page.props.flash?.booking_notice ?? null);
 const startDateValue = ref(null);
 const endDateValue = ref(null);
 const bookingForm = useForm({
@@ -565,6 +635,16 @@ const bookingForm = useForm({
     notes: '',
     payment_plan: 'full',
     payment_locale: '',
+});
+const inputClass = (field) => {
+    const base = 'rounded-xl border bg-white px-4 py-3 text-base text-[var(--ink)]';
+    return bookingForm.errors[field]
+        ? `${base} border-[var(--terracotta)]`
+        : `${base} border-black/15`;
+};
+const bookingErrorList = computed(() => {
+    const errors = Object.values(bookingForm.errors || {}).filter(Boolean);
+    return [...new Set(errors)];
 });
 
 const startOfDay = (value) => {
@@ -683,19 +763,30 @@ const onScroll = () => {
 };
 
 const pickDefaultLanguage = () => {
+    const preferredLocale = normalizeLocaleCode(props.auth?.user?.preferred_locale);
+
+    if (supportedLocales.value.includes(preferredLocale)) {
+        return preferredLocale;
+    }
+
     if (typeof window === 'undefined') {
-        return 'en';
+        return defaultLocale.value;
     }
 
     const candidates = [
-        document.documentElement?.lang,
+        normalizeLocaleCode(document.documentElement?.lang),
         ...(navigator.languages || []),
         navigator.language,
-    ].filter(Boolean);
+    ].map((value) => normalizeLocaleCode(value))
+        .filter(Boolean);
 
-    return candidates.some((value) => String(value).toLowerCase().startsWith('it'))
-        ? 'it'
-        : 'en';
+    for (const candidate of candidates) {
+        if (supportedLocales.value.includes(candidate)) {
+            return candidate;
+        }
+    }
+
+    return defaultLocale.value;
 };
 
 onMounted(() => {
@@ -707,6 +798,14 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('scroll', onScroll);
 });
+
+watch(
+    () => props.apartment?.id ?? null,
+    (value) => {
+        bookingForm.apartment_id = value;
+    },
+    { immediate: true },
+);
 
 watch(
     () => props.auth?.user?.email,
@@ -785,11 +884,19 @@ const pickLocalized = (base, fallback = '') => {
 };
 
 const submitBooking = () => {
+    bookingForm.clearErrors();
+
+    if (!bookingForm.apartment_id) {
+        bookingForm.setError('apartment_id', content.value.apartmentRequiredError);
+        return;
+    }
+
     if (props.auth?.user?.email) {
         bookingForm.email = props.auth.user.email;
     }
 
-    bookingForm.post('/booking-request', {
+    bookingForm.post(bookingRequestUrl.value, {
+        preserveScroll: true,
         onSuccess: () => {
             const fields = ['start_date', 'end_date', 'guests_count', 'name', 'surname', 'notes'];
             if (!props.auth?.user?.email) {
@@ -900,6 +1007,10 @@ const content = computed(() => {
         surnameLabel: language.value === 'it' ? 'Cognome' : 'Last name',
         guestsFormLabel: language.value === 'it' ? 'Ospiti' : 'Guests',
         bookingSubmitLabel: language.value === 'it' ? 'Invia richiesta' : 'Send request',
+        validationErrorTitle: language.value === 'it' ? 'Correggi i campi evidenziati' : 'Please review the highlighted fields',
+        apartmentRequiredError: language.value === 'it'
+            ? 'Nessun appartamento configurato. Riprova piu tardi.'
+            : 'No apartment is configured right now. Please try again later.',
         authenticatedLabel: language.value === 'it' ? 'Autenticato' : 'Authenticated',
         loginCta: language.value === 'it' ? 'Accedi' : 'Sign in',
         paymentPlanLabel: language.value === 'it' ? 'Pagamento' : 'Payment',

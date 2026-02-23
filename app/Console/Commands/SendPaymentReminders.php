@@ -4,10 +4,11 @@ namespace App\Console\Commands;
 
 use App\Mail\PaymentReminderMail;
 use App\Models\Reservation;
+use App\Support\LocalePreference;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class SendPaymentReminders extends Command
 {
@@ -44,6 +45,7 @@ class SendPaymentReminders extends Command
             $locale = $reservation->payments()
                 ->orderBy('id')
                 ->value('locale');
+            $locale = LocalePreference::normalize($customer->preferred_locale, $locale);
 
             Mail::to($customer->email)->send(
                 new PaymentReminderMail($reservation, $daysToCheckIn, $locale)

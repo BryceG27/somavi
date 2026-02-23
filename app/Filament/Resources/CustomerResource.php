@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Filament\Resources\CustomerResource\RelationManagers\CustomerReservationsRelationManager;
 use App\Models\Customer;
+use App\Support\LocalePreference;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -37,6 +38,10 @@ class CustomerResource extends Resource
                         Forms\Components\TextInput::make('email')
                             ->label('Email')
                             ->disabled(),
+                        Forms\Components\Select::make('preferred_locale')
+                            ->label('Lingua preferita')
+                            ->options(self::localeOptions())
+                            ->disabled(),
                     ])
                     ->columns(2),
             ]);
@@ -54,6 +59,10 @@ class CustomerResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('preferred_locale')
+                    ->label('Lingua')
+                    ->formatStateUsing(fn (?string $state) => self::localeOptions()[$state] ?? strtoupper((string) $state))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Registrato')
@@ -78,5 +87,13 @@ class CustomerResource extends Resource
             'index' => Pages\ListCustomers::route('/'),
             'view' => Pages\ViewCustomer::route('/{record}'),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function localeOptions(): array
+    {
+        return LocalePreference::labels();
     }
 }

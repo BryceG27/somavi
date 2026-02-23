@@ -29,6 +29,7 @@ class UserFactory extends Factory
             'surname' => fake()->lastName(),
             'user_group_id' => UserGroup::factory(),
             'email' => fake()->unique()->safeEmail(),
+            'preferred_locale' => fake()->randomElement(['it', 'en']),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
