@@ -36,7 +36,7 @@ class WebController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
-            'preferred_locale' => ['nullable', Rule::in(LocalePreference::supportedLocales())],
+            'preferred_locale' => ['nullable', 'string', 'max:10'],
         ]);
 
         $credentials = [
@@ -182,12 +182,7 @@ class WebController extends Controller
             }
         }
 
-        $base = (float) ($apartment->base_price ?? 0);
-        $extras = [
-            (float) ($apartment->extra_guest_price_2 ?? 0),
-            (float) ($apartment->extra_guest_price_3 ?? 0),
-            (float) ($apartment->extra_guest_price_4 ?? 0),
-        ];
+        [$base, $extras] = $this->resolvePricingForStartDate($apartment, $startDate);
         $extraCount = max(0, (int) $data['guests_count'] - 1);
         $perNight = $base + array_sum(array_slice($extras, 0, $extraCount));
         $nights = max(1, $startDate->diffInDays($endDate));
@@ -269,6 +264,29 @@ class WebController extends Controller
         }
     }
 
+    /**
+     * @return array{0: float, 1: array<int, float>}
+     */
+    private function resolvePricingForStartDate(Apartment $apartment, Carbon $startDate): array
+    {
+        $period = $apartment->periods()
+            ->whereDate('start_date', '<=', $startDate->toDateString())
+            ->whereDate('end_date', '>', $startDate->toDateString())
+            ->orderBy('start_date')
+            ->first();
+
+        $source = $period ?: $apartment;
+
+        return [
+            (float) ($source->base_price ?? 0),
+            [
+                (float) ($source->extra_guest_price_2 ?? 0),
+                (float) ($source->extra_guest_price_3 ?? 0),
+                (float) ($source->extra_guest_price_4 ?? 0),
+            ],
+        ];
+    }
+
     public function cancelReservation(Request $request, Reservation $reservation)
     {
         $user = $request->user();
@@ -343,6 +361,23 @@ class WebController extends Controller
         Auth::login($user);
 
         return to_route('private-area.index');
+    }
+
+    public function updateLocale(Request $request, string $locale)
+    {
+        $normalizedLocale = LocalePreference::normalizeSupported($locale);
+
+        abort_if($normalizedLocale === null, 404);
+
+        $request->session()->put('locale', $normalizedLocale);
+
+        $user = $request->user();
+
+        if ($user && $user->preferred_locale !== $normalizedLocale) {
+            $user->forceFill(['preferred_locale' => $normalizedLocale])->save();
+        }
+
+        return back(status: 303);
     }
 
     public function logout(Request $request)

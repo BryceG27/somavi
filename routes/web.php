@@ -16,6 +16,7 @@ Route::get('/login', [WebController::class, 'showLogin'])->name('login');
 Route::post('/login', [WebController::class, 'login'])->name('login.store');
 Route::get('/register', [WebController::class, 'showRegister'])->name('register');
 Route::post('/register', [WebController::class, 'register'])->name('register.store');
+Route::post('/locale/{locale}', [WebController::class, 'updateLocale'])->name('locale.update');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/private-area', [DashboardController::class, 'privateArea'])->name('private-area.index');

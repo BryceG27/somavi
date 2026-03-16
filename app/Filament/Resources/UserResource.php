@@ -19,6 +19,8 @@ class UserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
+    protected static ?string $navigationLabel = 'Utenti';
+
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()

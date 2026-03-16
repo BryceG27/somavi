@@ -20,6 +20,8 @@ class ReservationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
+    protected static ?string $navigationLabel = 'Prenotazioni';
+
     public static function form(Form $form): Form
     {
         return $form

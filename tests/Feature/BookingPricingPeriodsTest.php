@@ -1,0 +1,167 @@
+<?php
+
+use App\Models\Apartment;
+use App\Models\Period;
+use App\Models\Reservation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+
+uses(RefreshDatabase::class);
+
+it('uses apartment pricing when no period matches the check-in date', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        $apartment = createPricingApartment([
+            'base_price' => 100,
+            'extra_guest_price_2' => 20,
+            'extra_guest_price_3' => 30,
+            'extra_guest_price_4' => 40,
+        ]);
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'start_date' => '2026-04-10',
+            'end_date' => '2026-04-13',
+            'guests_count' => 3,
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->latest('id')->firstOrFail();
+
+        expect((float) $reservation->subtotal)->toBe(450.0)
+            ->and((float) $reservation->total)->toBe(450.0);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+it('uses period pricing when check-in date is inside a period', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        $apartment = createPricingApartment([
+            'base_price' => 100,
+            'extra_guest_price_2' => 20,
+            'extra_guest_price_3' => 30,
+            'extra_guest_price_4' => 40,
+        ]);
+
+        Period::query()->create([
+            'apartment_id' => $apartment->id,
+            'name' => 'Alta stagione',
+            'start_date' => '2026-05-01',
+            'end_date' => '2026-05-20',
+            'base_price' => 220,
+            'extra_guest_price_2' => 25,
+            'extra_guest_price_3' => 35,
+            'extra_guest_price_4' => 45,
+        ]);
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'start_date' => '2026-05-10',
+            'end_date' => '2026-05-13',
+            'guests_count' => 2,
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->latest('id')->firstOrFail();
+
+        expect((float) $reservation->subtotal)->toBe(735.0)
+            ->and((float) $reservation->total)->toBe(735.0);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+it('uses the first period pricing when stay crosses into another period', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        $apartment = createPricingApartment([
+            'base_price' => 100,
+            'extra_guest_price_2' => 20,
+            'extra_guest_price_3' => 30,
+            'extra_guest_price_4' => 40,
+        ]);
+
+        Period::query()->create([
+            'apartment_id' => $apartment->id,
+            'name' => 'Periodo 1',
+            'start_date' => '2026-06-10',
+            'end_date' => '2026-06-15',
+            'base_price' => 180,
+            'extra_guest_price_2' => 10,
+            'extra_guest_price_3' => 15,
+            'extra_guest_price_4' => 20,
+        ]);
+
+        Period::query()->create([
+            'apartment_id' => $apartment->id,
+            'name' => 'Periodo 2',
+            'start_date' => '2026-06-15',
+            'end_date' => '2026-06-25',
+            'base_price' => 300,
+            'extra_guest_price_2' => 30,
+            'extra_guest_price_3' => 40,
+            'extra_guest_price_4' => 50,
+        ]);
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'start_date' => '2026-06-14',
+            'end_date' => '2026-06-18',
+            'guests_count' => 1,
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->latest('id')->firstOrFail();
+
+        expect((float) $reservation->subtotal)->toBe(720.0)
+            ->and((float) $reservation->total)->toBe(720.0);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+/**
+ * @param array<string, mixed> $overrides
+ */
+function createPricingApartment(array $overrides = []): Apartment
+{
+    return Apartment::query()->create(array_merge([
+        'name_it' => 'Test Apartment',
+        'name_en' => 'Test Apartment',
+        'address_it' => 'Via Test 1',
+        'address_en' => 'Test Street 1',
+        'rooms_count' => 2,
+        'beds_count' => 2,
+        'bathrooms_count' => 1,
+        'max_guests' => 4,
+        'base_price' => 50,
+        'extra_guest_price_2' => 10,
+        'extra_guest_price_3' => 10,
+        'extra_guest_price_4' => 10,
+    ], $overrides));
+}
+
+/**
+ * @param array<string, mixed> $overrides
+ * @return array<string, mixed>
+ */
+function bookingPayload(int $apartmentId, array $overrides = []): array
+{
+    return array_merge([
+        'apartment_id' => $apartmentId,
+        'email' => 'guest@example.com',
+        'name' => 'Mario',
+        'surname' => 'Rossi',
+        'start_date' => '2026-04-10',
+        'end_date' => '2026-04-13',
+        'guests_count' => 2,
+        'notes' => null,
+        'payment_plan' => 'full',
+        'payment_locale' => 'it',
+    ], $overrides);
+}

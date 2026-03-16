@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Apartment;
 use App\Models\Payment;
 use App\Models\Reservation;
+use App\Models\User;
 use App\Support\LocalePreference;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,21 +15,49 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    private function serializeAuthUser(?User $user, bool $includePhone = false): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $payload = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'email' => $user->email,
+            'preferred_locale' => LocalePreference::normalize($user->preferred_locale),
+        ];
+
+        if ($includePhone) {
+            $payload['phone'] = $user->phone;
+        }
+
+        return $payload;
+    }
+
     public function index()
     {
+        $authUser = Auth::user();
+
         $apartment = Apartment::query()
-            ->with(['attachments' => function ($query) {
-                $query
-                    ->where('is_enabled', true)
-                    ->orderBy('sort_order');
-            }])
+            ->with([
+                'attachments' => function ($query) {
+                    $query
+                        ->where('is_enabled', true)
+                        ->orderBy('sort_order');
+                },
+                'periods' => function ($query) {
+                    $query->orderBy('start_date');
+                },
+            ])
             ->first();
 
         if (! $apartment) {
             return Inertia::render('Home', [
                 'apartment' => null,
                 'auth' => [
-                    'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email', 'preferred_locale']) : null,
+                    'user' => $this->serializeAuthUser($authUser),
                 ],
                 'blocked_dates' => [],
                 'reservations' => [],
@@ -79,6 +108,18 @@ class DashboardController extends Controller
                 'extra_guest_price_2' => $apartment->extra_guest_price_2,
                 'extra_guest_price_3' => $apartment->extra_guest_price_3,
                 'extra_guest_price_4' => $apartment->extra_guest_price_4,
+                'periods' => $apartment->periods
+                    ->map(fn ($period) => [
+                        'id' => $period->id,
+                        'name' => $period->name,
+                        'start_date' => $period->start_date?->toDateString(),
+                        'end_date' => $period->end_date?->toDateString(),
+                        'base_price' => $period->base_price,
+                        'extra_guest_price_2' => $period->extra_guest_price_2,
+                        'extra_guest_price_3' => $period->extra_guest_price_3,
+                        'extra_guest_price_4' => $period->extra_guest_price_4,
+                    ])
+                    ->values(),
                 'cover_image_url' => $cover ? Storage::disk('public_root')->url($cover->path) : null,
                 'images' => $apartment->attachments
                     ->where('attachment_type', 'image')
@@ -91,7 +132,7 @@ class DashboardController extends Controller
                     ]),
             ],
             'auth' => [
-                'user' => Auth::user() ? Auth::user()->only(['id', 'name', 'surname', 'email', 'preferred_locale']) : null,
+                'user' => $this->serializeAuthUser($authUser),
             ],
             'blocked_dates' => $apartment->blockedDates()
                 ->orderBy('start_date')
@@ -158,7 +199,7 @@ class DashboardController extends Controller
 
         return Inertia::render('PrivateArea', [
             'auth' => [
-                'user' => $user ? $user->only(['id', 'name', 'surname', 'email', 'phone', 'preferred_locale']) : null,
+                'user' => $this->serializeAuthUser($user, true),
             ],
             'reservations' => $user
                 ? $user->reservations()

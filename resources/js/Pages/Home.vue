@@ -45,6 +45,7 @@
                         <div class="relative">
                             <select
                                 v-model="language"
+                                @change="onLanguageChange"
                                 class="appearance-none rounded-full border border-white/30 bg-white/10 px-4 py-2 pr-10 text-[11px] font-semibold uppercase tracking-[0.3em] text-white"
                             >
                                 <option v-for="locale in supportedLocales" :key="locale" :value="locale">
@@ -404,7 +405,7 @@
                                 <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                     {{ content.pricingTitle }}
                                 </p>
-                                <ul class="mt-4 space-y-2 text-sm text-[var(--ink)]/80">
+                                <ul v-if="hasSelectedPricingPeriod" class="mt-4 space-y-2 text-sm text-[var(--ink)]/80">
                                     <li class="flex items-center justify-between">
                                         <span>{{ content.basePriceLabel }}</span>
                                         <span>{{ formatCurrency(pricing.base) }}</span>
@@ -422,12 +423,18 @@
                                         <span>+ {{ formatCurrency(pricing.extra4) }}</span>
                                     </li>
                                 </ul>
+                                <p
+                                    v-else
+                                    class="mt-4 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]"
+                                >
+                                    {{ content.pricingSelectionHint }}
+                                </p>
                                 <div class="mt-4 border-t border-black/10 pt-4">
                                     <p class="text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                         {{ content.totalLabel }}
                                     </p>
                                     <p class="mt-2 text-2xl font-semibold text-[var(--ink)]" style="font-family: var(--font-display);">
-                                        {{ formatCurrency(pricing.totalForGuests) }}
+                                        {{ pricing.totalForGuests === null ? '-' : formatCurrency(pricing.totalForGuests) }}
                                     </p>
                                     <p class="mt-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
                                         {{ content.perNightLabel }}
@@ -441,12 +448,12 @@
                                 </div>
                                 <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
                                     <span>{{ content.perNightLabel }}</span>
-                                    <span>{{ formatCurrency(pricing.totalForGuests) }}</span>
+                                    <span>{{ pricing.totalForGuests === null ? '-' : formatCurrency(pricing.totalForGuests) }}</span>
                                 </div>
                                 <div class="mt-4 border-t border-black/10 pt-3">
                                     <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
                                         <span>{{ content.totalStayLabel }}</span>
-                                        <span>{{ formatCurrency(bookingTotal) }}</span>
+                                        <span>{{ bookingTotal === null ? '-' : formatCurrency(bookingTotal) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -558,7 +565,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
@@ -590,10 +597,24 @@ const props = defineProps({
 const language = ref('en');
 const page = usePage();
 const localization = computed(() => page.props.localization || {});
-const normalizeLocaleCode = (value) => String(value || '')
-    .toLowerCase()
-    .replace('_', '-')
-    .split('-')[0];
+const LOCALE_STORAGE_KEY = 'somavi.locale';
+const normalizeLocaleCode = (value) => {
+    const primary = String(value || '')
+        .toLowerCase()
+        .replace('_', '-')
+        .split('-')[0]
+        .trim();
+
+    if (primary === 'italian' || primary === 'italiano') {
+        return 'it';
+    }
+
+    if (primary === 'english' || primary === 'inglese') {
+        return 'en';
+    }
+
+    return primary;
+};
 const supportedLocales = computed(() => {
     const locales = Array.isArray(localization.value.supported_locales)
         ? localization.value.supported_locales.map((value) => normalizeLocaleCode(value)).filter(Boolean)
@@ -614,7 +635,13 @@ const defaultLocale = computed(() => {
         ? locale
         : (supportedLocales.value[0] || 'en');
 });
+const currentLocale = computed(() => {
+    const locale = normalizeLocaleCode(localization.value.current_locale);
+
+    return supportedLocales.value.includes(locale) ? locale : '';
+});
 const routeUrls = computed(() => page.props.routes || {});
+const localeUpdateTemplate = computed(() => routeUrls.value.locale_update_template || '/locale/__locale__');
 const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
 const isAuthenticated = computed(() => Boolean(props.auth?.user));
@@ -646,6 +673,9 @@ const bookingErrorList = computed(() => {
     const errors = Object.values(bookingForm.errors || {}).filter(Boolean);
     return [...new Set(errors)];
 });
+const withLocale = (template, locale) => (
+    String(template).replace('__locale__', encodeURIComponent(String(locale)))
+);
 
 const startOfDay = (value) => {
     const date = new Date(value);
@@ -674,6 +704,38 @@ const parseDate = (value) => {
 
     return new Date(year, month - 1, day);
 };
+
+const pricingPeriods = computed(() => {
+    const periods = Array.isArray(props.apartment?.periods) ? props.apartment.periods : [];
+
+    return periods
+        .map((period) => {
+            const start = parseDate(period?.start_date);
+            const end = parseDate(period?.end_date);
+
+            if (!start || !end || start >= end) {
+                return null;
+            }
+
+            return {
+                ...period,
+                __start: start,
+                __end: end,
+            };
+        })
+        .filter(Boolean);
+});
+
+const activePricingPeriod = computed(() => {
+    const start = parseDate(bookingForm.start_date);
+
+    if (!start) {
+        return null;
+    }
+
+    return pricingPeriods.value.find((period) => start >= period.__start && start < period.__end) || null;
+});
+const hasSelectedPricingPeriod = computed(() => Boolean(bookingForm.start_date));
 
 const formatDateForApi = (date) => {
     if (!date) {
@@ -763,10 +825,22 @@ const onScroll = () => {
 };
 
 const pickDefaultLanguage = () => {
+    if (currentLocale.value) {
+        return currentLocale.value;
+    }
+
     const preferredLocale = normalizeLocaleCode(props.auth?.user?.preferred_locale);
 
     if (supportedLocales.value.includes(preferredLocale)) {
         return preferredLocale;
+    }
+
+    const storedLocale = typeof window !== 'undefined'
+        ? normalizeLocaleCode(window.localStorage.getItem(LOCALE_STORAGE_KEY))
+        : '';
+
+    if (supportedLocales.value.includes(storedLocale)) {
+        return storedLocale;
     }
 
     if (typeof window === 'undefined') {
@@ -774,9 +848,9 @@ const pickDefaultLanguage = () => {
     }
 
     const candidates = [
-        normalizeLocaleCode(document.documentElement?.lang),
         ...(navigator.languages || []),
         navigator.language,
+        normalizeLocaleCode(document.documentElement?.lang),
     ].map((value) => normalizeLocaleCode(value))
         .filter(Boolean);
 
@@ -787,6 +861,21 @@ const pickDefaultLanguage = () => {
     }
 
     return defaultLocale.value;
+};
+
+const onLanguageChange = (event) => {
+    const selectedLocale = normalizeLocaleCode(event?.target?.value ?? language.value);
+
+    if (!supportedLocales.value.includes(selectedLocale) || selectedLocale === currentLocale.value) {
+        return;
+    }
+
+    language.value = selectedLocale;
+    router.post(withLocale(localeUpdateTemplate.value, selectedLocale), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    });
 };
 
 onMounted(() => {
@@ -820,7 +909,14 @@ watch(
 watch(
     () => language.value,
     (value) => {
-        bookingForm.payment_locale = value;
+        const normalizedLocale = normalizeLocaleCode(value);
+
+        bookingForm.payment_locale = normalizedLocale;
+
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(LOCALE_STORAGE_KEY, normalizedLocale);
+            document.documentElement.lang = normalizedLocale;
+        }
     },
     { immediate: true },
 );
@@ -1029,6 +1125,9 @@ const content = computed(() => {
         pricingNote: language.value === 'it'
             ? 'Il prezzo finale puo variare in base al periodo.'
             : 'Final pricing may vary depending on the season.',
+        pricingSelectionHint: language.value === 'it'
+            ? 'Seleziona il periodo per visualizzare il prezzo base.'
+            : 'Select a period to view the base price.',
         contactTitle: language.value === 'it' ? 'Contatti' : 'Contact',
         contactHeadline: language.value === 'it'
             ? 'Scrivici per il tuo soggiorno.'
@@ -1067,10 +1166,21 @@ const content = computed(() => {
 });
 
 const pricing = computed(() => {
-    const base = Number(props.apartment?.base_price ?? 0);
-    const extra2 = Number(props.apartment?.extra_guest_price_2 ?? 0);
-    const extra3 = Number(props.apartment?.extra_guest_price_3 ?? 0);
-    const extra4 = Number(props.apartment?.extra_guest_price_4 ?? 0);
+    if (!hasSelectedPricingPeriod.value) {
+        return {
+            base: null,
+            extra2: null,
+            extra3: null,
+            extra4: null,
+            totalForGuests: null,
+        };
+    }
+
+    const source = activePricingPeriod.value || props.apartment || {};
+    const base = Number(source.base_price ?? 0);
+    const extra2 = Number(source.extra_guest_price_2 ?? 0);
+    const extra3 = Number(source.extra_guest_price_3 ?? 0);
+    const extra4 = Number(source.extra_guest_price_4 ?? 0);
     const extraPrices = [extra2, extra3, extra4];
     const extras = extraPrices.slice(0, Math.max(0, bookingForm.guests_count - 1));
     const totalForGuests = base + extras.reduce((sum, price) => sum + price, 0);
@@ -1097,7 +1207,13 @@ const bookingNights = computed(() => {
     return diffDays > 0 ? diffDays : 0;
 });
 
-const bookingTotal = computed(() => pricing.value.totalForGuests * bookingNights.value);
+const bookingTotal = computed(() => {
+    if (pricing.value.totalForGuests === null) {
+        return null;
+    }
+
+    return pricing.value.totalForGuests * bookingNights.value;
+});
 
 const guestOptions = computed(() => {
     const maxGuests = Math.min(Number(props.apartment?.max_guests ?? 4), 4);

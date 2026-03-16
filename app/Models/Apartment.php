@@ -75,6 +75,11 @@ class Apartment extends Model
         return $this->hasMany(BlockedDate::class);
     }
 
+    public function periods(): HasMany
+    {
+        return $this->hasMany(Period::class);
+    }
+
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);

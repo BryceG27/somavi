@@ -17,6 +17,8 @@ class ApartmentResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-home';
 
+    protected static ?string $navigationLabel = 'Appartamenti';
+
     public static function form(Form $form): Form
     {
         return $form

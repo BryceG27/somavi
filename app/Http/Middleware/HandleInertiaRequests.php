@@ -17,6 +17,11 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $currentLocale = LocalePreference::normalize(
+            (string) $request->attributes->get('current_locale'),
+            LocalePreference::defaultLocale()
+        );
+
         return array_merge(parent::share($request), [
             'flash' => [
                 'booking_notice' => fn () => $request->session()->get('booking_notice'),
@@ -25,6 +30,7 @@ class HandleInertiaRequests extends Middleware
                 'supported_locales' => fn () => LocalePreference::supportedLocales(),
                 'locale_labels' => fn () => LocalePreference::labels(),
                 'default_locale' => fn () => LocalePreference::defaultLocale(),
+                'current_locale' => fn () => $currentLocale,
             ],
             'routes' => [
                 'home' => route('home'),
@@ -36,6 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'booking_request' => route('booking-request.store'),
                 'reservation_cancel_template' => route('reservations.cancel', ['reservation' => '__reservation__']),
                 'stripe_checkout_template' => route('payments.stripe.checkout', ['reservation' => '__reservation__']),
+                'locale_update_template' => route('locale.update', ['locale' => '__locale__']),
             ],
         ]);
     }

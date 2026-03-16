@@ -18,6 +18,8 @@ class CustomerResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
+    protected static ?string $navigationLabel = 'Clienti';
+
     public static function canCreate(): bool
     {
         return false;

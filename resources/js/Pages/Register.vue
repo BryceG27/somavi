@@ -12,6 +12,7 @@
                     <div class="relative">
                         <select
                             v-model="language"
+                            @change="onLanguageChange"
                             class="appearance-none rounded-full border border-black/15 bg-white px-4 py-2 pr-9 text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--ink)]"
                         >
                             <option v-for="locale in supportedLocales" :key="locale" :value="locale">
@@ -120,15 +121,29 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 
 const language = ref('en');
 const page = usePage();
 const localization = computed(() => page.props.localization || {});
-const normalizeLocaleCode = (value) => String(value || '')
-    .toLowerCase()
-    .replace('_', '-')
-    .split('-')[0];
+const LOCALE_STORAGE_KEY = 'somavi.locale';
+const normalizeLocaleCode = (value) => {
+    const primary = String(value || '')
+        .toLowerCase()
+        .replace('_', '-')
+        .split('-')[0]
+        .trim();
+
+    if (primary === 'italian' || primary === 'italiano') {
+        return 'it';
+    }
+
+    if (primary === 'english' || primary === 'inglese') {
+        return 'en';
+    }
+
+    return primary;
+};
 const supportedLocales = computed(() => {
     const locales = Array.isArray(localization.value.supported_locales)
         ? localization.value.supported_locales.map((value) => normalizeLocaleCode(value)).filter(Boolean)
@@ -149,16 +164,33 @@ const defaultLocale = computed(() => {
         ? locale
         : (supportedLocales.value[0] || 'en');
 });
+const currentLocale = computed(() => {
+    const locale = normalizeLocaleCode(localization.value.current_locale);
+
+    return supportedLocales.value.includes(locale) ? locale : '';
+});
 
 const pickDefaultLanguage = () => {
+    if (currentLocale.value) {
+        return currentLocale.value;
+    }
+
+    const storedLocale = typeof window !== 'undefined'
+        ? normalizeLocaleCode(window.localStorage.getItem(LOCALE_STORAGE_KEY))
+        : '';
+
+    if (supportedLocales.value.includes(storedLocale)) {
+        return storedLocale;
+    }
+
     if (typeof window === 'undefined') {
         return defaultLocale.value;
     }
 
     const candidates = [
-        normalizeLocaleCode(document.documentElement?.lang),
         ...(navigator.languages || []),
         navigator.language,
+        normalizeLocaleCode(document.documentElement?.lang),
     ].map((value) => normalizeLocaleCode(value))
         .filter(Boolean);
 
@@ -188,16 +220,42 @@ const routes = computed(() => ({
     home: page.props.routes?.home || '/',
     login: page.props.routes?.login || '/login',
     register: page.props.routes?.register || '/register',
+    locale_update_template: page.props.routes?.locale_update_template || '/locale/__locale__',
 }));
+const withLocale = (template, locale) => (
+    String(template).replace('__locale__', encodeURIComponent(String(locale)))
+);
 
 const submit = () => {
     form.post(routes.value.register);
 };
 
+const onLanguageChange = (event) => {
+    const selectedLocale = normalizeLocaleCode(event?.target?.value ?? language.value);
+
+    if (!supportedLocales.value.includes(selectedLocale) || selectedLocale === currentLocale.value) {
+        return;
+    }
+
+    language.value = selectedLocale;
+    router.post(withLocale(routes.value.locale_update_template, selectedLocale), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    });
+};
+
 watch(
     () => language.value,
     (value) => {
-        form.preferred_locale = normalizeLocaleCode(value);
+        const normalizedLocale = normalizeLocaleCode(value);
+
+        form.preferred_locale = normalizedLocale;
+
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(LOCALE_STORAGE_KEY, normalizedLocale);
+            document.documentElement.lang = normalizedLocale;
+        }
     },
     { immediate: true },
 );
