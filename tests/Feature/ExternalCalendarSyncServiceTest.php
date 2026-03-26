@@ -68,6 +68,7 @@ ICS, 200),
     $remaining = BlockedDate::query()->where('apartment_id', $apartment->id)->get();
 
     expect($remaining)->toHaveCount(1)
+        ->and($remaining->first()->detail)->toBe('Prenotazione da Airbnb')
         ->and($remaining->first()->start_date?->toDateString())->toBe('2026-03-11')
         ->and($remaining->first()->end_date?->toDateString())->toBe('2026-03-16');
 });
@@ -133,6 +134,7 @@ ICS, 200),
         ->and(
             BlockedDate::query()
                 ->where('apartment_id', $apartment->id)
+                ->where('detail', 'Prenotazione da Airbnb')
                 ->whereDate('start_date', '2026-04-11')
                 ->whereDate('end_date', '2026-04-13')
                 ->exists()

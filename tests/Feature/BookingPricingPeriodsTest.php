@@ -5,6 +5,7 @@ use App\Models\Period;
 use App\Models\Reservation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -12,6 +13,8 @@ it('uses apartment pricing when no period matches the check-in date', function (
     Carbon::setTestNow('2026-03-12');
 
     try {
+        fakeStripeCheckout();
+
         $apartment = createPricingApartment([
             'base_price' => 100,
             'extra_guest_price_2' => 20,
@@ -40,6 +43,8 @@ it('uses period pricing when check-in date is inside a period', function () {
     Carbon::setTestNow('2026-03-12');
 
     try {
+        fakeStripeCheckout();
+
         $apartment = createPricingApartment([
             'base_price' => 100,
             'extra_guest_price_2' => 20,
@@ -79,6 +84,8 @@ it('uses the first period pricing when stay crosses into another period', functi
     Carbon::setTestNow('2026-03-12');
 
     try {
+        fakeStripeCheckout();
+
         $apartment = createPricingApartment([
             'base_price' => 100,
             'extra_guest_price_2' => 20,
@@ -164,4 +171,16 @@ function bookingPayload(int $apartmentId, array $overrides = []): array
         'payment_plan' => 'full',
         'payment_locale' => 'it',
     ], $overrides);
+}
+
+function fakeStripeCheckout(): void
+{
+    config(['services.stripe.secret' => 'sk_test_fake']);
+
+    Http::fake([
+        'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+            'id' => 'cs_test_123',
+            'url' => 'https://checkout.stripe.test/session/cs_test_123',
+        ], 200),
+    ]);
 }

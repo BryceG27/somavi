@@ -126,7 +126,7 @@
                 <div class="mt-4 grid gap-6 lg:grid-cols-2">
                     <div>
                         <h2 class="text-2xl font-semibold" style="font-family: var(--font-display);">{{ copy.bookingsTitle }}</h2>
-                        <div v-if="upcomingReservations.length" class="mt-6 space-y-4">
+                        <div v-if="upcomingReservations.length" class="mt-6 space-y-4" style="max-height: 50rem; overflow: auto;">
                             <div
                                 v-for="reservation in upcomingReservations"
                                 :key="reservation.id"
@@ -199,7 +199,7 @@
                     </div>
                     <div>
                         <h2 class="text-2xl font-semibold" style="font-family: var(--font-display);">{{ copy.staysTitle }}</h2>
-                        <div v-if="pastReservations.length" class="mt-6 space-y-4">
+                        <div v-if="pastReservations.length" class="mt-6 space-y-4" style="max-height: 50rem; overflow: auto;">
                             <div
                                 v-for="reservation in pastReservations"
                                 :key="reservation.id"
@@ -606,7 +606,7 @@ const reservationStatusLabel = (status) => {
         return language.value === 'it' ? 'Cancellata' : 'Cancelled';
     }
 
-    return language.value === 'it' ? 'In verifica disponibilita' : 'Availability check';
+    return language.value === 'it' ? 'In attesa di conferma' : 'Pending confirmation';
 };
 
 const reservationStatusClass = (status) => {
@@ -657,7 +657,7 @@ const copy = computed(() => (language.value === 'it'
         paymentAuthorizedKicker: 'Pagamento autorizzato',
         paymentAuthorizedBody: 'Il pagamento e stato autorizzato. Stiamo verificando la disponibilita e ti confermeremo a breve.',
         paymentPaidKicker: 'Pagamento completato',
-        paymentPaidBody: 'Pagamento registrato correttamente.',
+        paymentPaidBody: 'Pagamento registrato correttamente. La prenotazione e in attesa di conferma.',
         paymentCancelledKicker: 'Pagamento annullato',
         paymentCancelledBody: 'Hai annullato il pagamento. Puoi riprovare quando vuoi.',
         paymentFailedKicker: 'Pagamento non riuscito',
@@ -711,7 +711,7 @@ const copy = computed(() => (language.value === 'it'
         paymentAuthorizedKicker: 'Payment authorized',
         paymentAuthorizedBody: 'Your payment has been authorized. We are checking availability and will confirm shortly.',
         paymentPaidKicker: 'Payment completed',
-        paymentPaidBody: 'Your payment was recorded successfully.',
+        paymentPaidBody: 'Your payment was recorded successfully. The reservation is pending confirmation.',
         paymentCancelledKicker: 'Payment cancelled',
         paymentCancelledBody: 'You cancelled the payment. You can try again at any time.',
         paymentFailedKicker: 'Payment failed',

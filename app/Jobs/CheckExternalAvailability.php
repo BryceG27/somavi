@@ -2,17 +2,20 @@
 
 namespace App\Jobs;
 
+use App\Mail\ReservationConfirmedMail;
 use App\Models\BlockedDate;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Services\ExternalCalendar\ExternalCalendarSyncService;
 use App\Services\ReservationCancellationService;
+use App\Support\LocalePreference;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class CheckExternalAvailability implements ShouldQueue
@@ -65,9 +68,18 @@ class CheckExternalAvailability implements ShouldQueue
             return;
         }
 
-        $reservation->forceFill([
-            'status' => Reservation::STATUS_CONFIRMED,
-        ])->save();
+        $updated = Reservation::query()
+            ->whereKey($reservation->id)
+            ->where('status', Reservation::STATUS_PENDING)
+            ->update([
+                'status' => Reservation::STATUS_CONFIRMED,
+            ]);
+
+        if ($updated !== 1) {
+            return;
+        }
+
+        $this->sendConfirmationEmail($reservation->fresh(['customer', 'apartment', 'payments']));
     }
 
     private function resolveAvailability(Reservation $reservation): ?bool
@@ -107,5 +119,26 @@ class CheckExternalAvailability implements ShouldQueue
             ->exists();
 
         return ! $isBlocked;
+    }
+
+    private function sendConfirmationEmail(?Reservation $reservation): void
+    {
+        if (! $reservation) {
+            return;
+        }
+
+        $customer = $reservation->customer;
+        $email = trim((string) ($customer?->email ?? ''));
+
+        if ($email === '') {
+            return;
+        }
+
+        $paymentLocale = (string) ($reservation->payments
+            ->sortBy('id')
+            ->first()?->locale ?? '');
+        $locale = LocalePreference::normalize($customer?->preferred_locale, $paymentLocale);
+
+        Mail::to($email)->send(new ReservationConfirmedMail($reservation, $locale));
     }
 }

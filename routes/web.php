@@ -55,4 +55,8 @@ Route::prefix('commands')->group(function() {
         Artisan::call('migrate', ['--force' => true]);
         return 'Application updated';
     });
+
+    Route::get('/phpinfo', function() {
+        phpinfo();
+    });
 });

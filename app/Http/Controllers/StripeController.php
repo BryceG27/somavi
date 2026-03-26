@@ -11,6 +11,7 @@ use App\Services\StripeCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -429,7 +430,27 @@ class StripeController extends Controller
 
     private function redirectWithPaymentState(string $state): RedirectResponse
     {
-        return redirect()->route('private-area.index', ['payment' => $state]);
+        if (Auth::check()) {
+            return redirect()->route('private-area.index', ['payment' => $state]);
+        }
+
+        if ($state === 'failed') {
+            return redirect()
+                ->route('home', ['payment' => 'failed'])
+                ->withErrors([
+                    'payment_plan' => 'Pagamento non disponibile. Riprova piu tardi.',
+                ]);
+        }
+
+        if ($state === 'cancelled') {
+            return redirect()
+                ->route('home', ['payment' => 'cancelled'])
+                ->withErrors([
+                    'payment_plan' => 'Pagamento annullato. Puoi riprovare quando vuoi.',
+                ]);
+        }
+
+        return redirect()->route('home', ['payment' => $state]);
     }
 
     /**

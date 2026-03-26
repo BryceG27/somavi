@@ -132,8 +132,9 @@ class ExternalCalendarSyncService
     private function syncBlockedDates(Apartment $apartment, string $provider, Collection $events): array
     {
         $managedPrefix = 'ical:'.$provider.':';
+        $detail = $this->resolveProviderDetail($provider);
 
-        return DB::transaction(function () use ($apartment, $events, $managedPrefix): array {
+        return DB::transaction(function () use ($apartment, $events, $managedPrefix, $detail): array {
             $existing = BlockedDate::query()
                 ->where('apartment_id', $apartment->id)
                 ->where('reason', 'like', $managedPrefix.'%')
@@ -156,6 +157,7 @@ class ExternalCalendarSyncService
                         'apartment_id' => $apartment->id,
                         'start_date' => $event['start_date'],
                         'end_date' => $event['end_date'],
+                        'detail' => $detail,
                         'reason' => $reason,
                     ]);
 
@@ -166,11 +168,13 @@ class ExternalCalendarSyncService
 
                 if (
                     $blockedDate->start_date?->toDateString() !== $event['start_date'] ||
-                    $blockedDate->end_date?->toDateString() !== $event['end_date']
+                    $blockedDate->end_date?->toDateString() !== $event['end_date'] ||
+                    (string) ($blockedDate->detail ?? '') !== $detail
                 ) {
                     $blockedDate->forceFill([
                         'start_date' => $event['start_date'],
                         'end_date' => $event['end_date'],
+                        'detail' => $detail,
                     ])->save();
 
                     $updated++;
@@ -197,5 +201,15 @@ class ExternalCalendarSyncService
                 'error' => null,
             ];
         });
+    }
+
+    private function resolveProviderDetail(string $provider): string
+    {
+        return match ($provider) {
+            'airbnb' => 'Prenotazione da Airbnb',
+            'booking' => 'Prenotazione da Booking',
+            'vrbo' => 'Prenotazione da Vrbo',
+            default => 'Prenotazione da portale esterno',
+        };
     }
 }

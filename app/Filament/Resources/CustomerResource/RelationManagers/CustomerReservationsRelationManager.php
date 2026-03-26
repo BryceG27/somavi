@@ -27,7 +27,7 @@ class CustomerReservationsRelationManager extends RelationManager
                     ->label('Stato')
                     ->options([
                         Reservation::STATUS_AWAITING_PAYMENT => 'In attesa di pagamento',
-                        Reservation::STATUS_PENDING => 'In verifica disponibilita',
+                        Reservation::STATUS_PENDING => 'In attesa di conferma',
                         Reservation::STATUS_CONFIRMED => 'Confermata',
                         Reservation::STATUS_CANCELLED => 'Cancellata',
                     ])

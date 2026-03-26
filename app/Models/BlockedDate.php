@@ -14,6 +14,7 @@ class BlockedDate extends Model
         'apartment_id',
         'start_date',
         'end_date',
+        'detail',
         'reason',
     ];
 

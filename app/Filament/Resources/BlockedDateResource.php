@@ -36,8 +36,11 @@ class BlockedDateResource extends Resource
                         Forms\Components\DatePicker::make('end_date')
                             ->label('A')
                             ->required(),
+                        Forms\Components\TextInput::make('detail')
+                            ->label('Dettaglio')
+                            ->maxLength(255),
                         Forms\Components\TextInput::make('reason')
-                            ->label('Motivo')
+                            ->label('Riferimento tecnico')
                             ->maxLength(255),
                     ])
                     ->columns(2),
@@ -60,8 +63,11 @@ class BlockedDateResource extends Resource
                     ->label('A')
                     ->date()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('detail')
+                    ->label('Dettaglio')
+                    ->limit(40),
                 Tables\Columns\TextColumn::make('reason')
-                    ->label('Motivo')
+                    ->label('Rif. tecnico')
                     ->limit(30),
             ])
             ->actions([

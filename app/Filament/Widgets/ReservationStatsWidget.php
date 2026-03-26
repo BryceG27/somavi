@@ -37,7 +37,7 @@ class ReservationStatsWidget extends StatsOverviewWidget
             Stat::make('Prenotazioni totali', $totalReservations),
             Stat::make('Prenotazioni attive', $activeReservations),
             Stat::make('In attesa pagamento', $awaitingPaymentReservations),
-            Stat::make('In verifica disponibilita', $pendingReservations),
+            Stat::make('In attesa di conferma', $pendingReservations),
             Stat::make('Prenotazioni cancellate', $cancelledReservations),
             Stat::make('Clienti', $customersCount),
         ];

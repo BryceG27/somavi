@@ -69,7 +69,6 @@ class WebController extends Controller
     public function bookingRequest(Request $request)
     {
         $authUser = $request->user();
-        $isGuestBooking = ! $authUser;
 
         if ($authUser) {
             if ($authUser->userGroup?->slug !== UserGroup::CUSTOMER_SLUG) {
@@ -239,10 +238,6 @@ class WebController extends Controller
             ]);
         }
 
-        if ($isGuestBooking) {
-            return back()->with('booking_notice', 'guest_registration_required');
-        }
-
         $payment = $reservation->payments()
             ->where('status', Payment::STATUS_PENDING)
             ->orderByRaw("case when step = 'deposit' then 0 when step = 'balance' then 1 else 2 end")
@@ -258,9 +253,21 @@ class WebController extends Controller
 
             return Inertia::location($session['url']);
         } catch (Throwable $exception) {
-            return back()->withErrors([
-                'payment_plan' => 'Pagamento non disponibile. Riprova piu tardi.',
-            ]);
+            $message = 'Pagamento non disponibile. Riprova piu tardi.';
+
+            if ($authUser) {
+                return redirect()
+                    ->route('private-area.index', ['payment' => 'failed'])
+                    ->withErrors([
+                        'payment' => $message,
+                    ]);
+            }
+
+            return redirect()
+                ->route('home', ['payment' => 'failed'])
+                ->withErrors([
+                    'payment_plan' => $message,
+                ]);
         }
     }
 

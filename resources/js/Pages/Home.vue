@@ -247,6 +247,29 @@
                     </div>
                     <div class="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                         <form class="space-y-5" @submit.prevent="submitBooking">
+                            <div id="booking-payment-feedback" ref="bookingPaymentFeedbackRef" class="scroll-mt-32"></div>
+                            <div
+                                v-if="showBookingPaymentCancelled"
+                                class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-[var(--ink)]"
+                            >
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-amber-700">
+                                    {{ content.paymentCancelledKicker }}
+                                </p>
+                                <p class="mt-2 text-sm">
+                                    {{ paymentErrorMessage || content.paymentCancelledBody }}
+                                </p>
+                            </div>
+                            <div
+                                v-else-if="showBookingPaymentFailed"
+                                class="rounded-2xl border border-[var(--terracotta)]/30 bg-[var(--terracotta)]/10 px-5 py-4 text-[var(--ink)]"
+                            >
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--terracotta)]">
+                                    {{ content.paymentFailedKicker }}
+                                </p>
+                                <p class="mt-2 text-sm">
+                                    {{ paymentErrorMessage || content.paymentFailedBody }}
+                                </p>
+                            </div>
                             <div
                                 v-if="bookingErrorList.length"
                                 class="rounded-2xl border border-[var(--terracotta)]/30 bg-[var(--terracotta)]/10 px-5 py-4 text-[var(--ink)]"
@@ -564,7 +587,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, reactive, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 
 import Dialog from 'primevue/dialog';
@@ -597,6 +620,7 @@ const props = defineProps({
 const language = ref('en');
 const page = usePage();
 const localization = computed(() => page.props.localization || {});
+const pageErrors = computed(() => page.props.errors || {});
 const LOCALE_STORAGE_KEY = 'somavi.locale';
 const normalizeLocaleCode = (value) => {
     const primary = String(value || '')
@@ -642,6 +666,7 @@ const currentLocale = computed(() => {
 });
 const routeUrls = computed(() => page.props.routes || {});
 const localeUpdateTemplate = computed(() => routeUrls.value.locale_update_template || '/locale/__locale__');
+const paymentState = ref('');
 const scrollY = ref(0);
 const headerOpacity = computed(() => Math.min(0.7, scrollY.value / 220));
 const isAuthenticated = computed(() => Boolean(props.auth?.user));
@@ -670,9 +695,35 @@ const inputClass = (field) => {
         : `${base} border-black/15`;
 };
 const bookingErrorList = computed(() => {
-    const errors = Object.values(bookingForm.errors || {}).filter(Boolean);
+    const errors = Object.entries(bookingForm.errors || {})
+        .filter(([field, value]) => field !== 'payment_plan' && Boolean(value))
+        .map(([, value]) => value);
+
     return [...new Set(errors)];
 });
+const paymentErrorMessage = computed(() => (
+    pageErrors.value.payment_plan
+    || pageErrors.value.payment
+    || bookingForm.errors.payment_plan
+    || ''
+));
+const bookingPaymentFeedbackRef = ref(null);
+const hasAutoScrolledToPaymentFeedback = ref(false);
+const normalizedPaymentErrorMessage = computed(() => String(paymentErrorMessage.value || '').toLowerCase());
+const showBookingPaymentCancelled = computed(() => (
+    paymentState.value === 'cancelled'
+    || normalizedPaymentErrorMessage.value.includes('annullato')
+    || normalizedPaymentErrorMessage.value.includes('cancelled')
+    || normalizedPaymentErrorMessage.value.includes('canceled')
+));
+const showBookingPaymentFailed = computed(() => (
+    !showBookingPaymentCancelled.value
+    && (paymentState.value === 'failed' || Boolean(paymentErrorMessage.value))
+));
+const shouldAutoScrollToBookingPaymentFeedback = computed(() => (
+    !isAuthenticated.value
+    && (showBookingPaymentCancelled.value || showBookingPaymentFailed.value)
+));
 const withLocale = (template, locale) => (
     String(template).replace('__locale__', encodeURIComponent(String(locale)))
 );
@@ -878,10 +929,33 @@ const onLanguageChange = (event) => {
     });
 };
 
+const scrollToBookingPaymentFeedback = () => {
+    if (!bookingPaymentFeedbackRef.value || typeof window === 'undefined') {
+        return;
+    }
+
+    bookingPaymentFeedbackRef.value.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+    });
+};
+
 onMounted(() => {
     language.value = pickDefaultLanguage();
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
+
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        paymentState.value = params.get('payment') || '';
+    }
+
+    if (shouldAutoScrollToBookingPaymentFeedback.value && !hasAutoScrolledToPaymentFeedback.value) {
+        nextTick(() => {
+            scrollToBookingPaymentFeedback();
+            hasAutoScrolledToPaymentFeedback.value = true;
+        });
+    }
 });
 
 onUnmounted(() => {
@@ -919,6 +993,21 @@ watch(
         }
     },
     { immediate: true },
+);
+
+watch(
+    () => shouldAutoScrollToBookingPaymentFeedback.value,
+    (shouldScroll) => {
+        if (!shouldScroll || hasAutoScrolledToPaymentFeedback.value) {
+            return;
+        }
+
+        nextTick(() => {
+            scrollToBookingPaymentFeedback();
+            hasAutoScrolledToPaymentFeedback.value = true;
+        });
+    },
+    { flush: 'post' },
 );
 
 watch(
@@ -1110,6 +1199,14 @@ const content = computed(() => {
         authenticatedLabel: language.value === 'it' ? 'Autenticato' : 'Authenticated',
         loginCta: language.value === 'it' ? 'Accedi' : 'Sign in',
         paymentPlanLabel: language.value === 'it' ? 'Pagamento' : 'Payment',
+        paymentCancelledKicker: language.value === 'it' ? 'Pagamento annullato' : 'Payment cancelled',
+        paymentCancelledBody: language.value === 'it'
+            ? 'Hai annullato il pagamento. Puoi riprovare da questa sezione.'
+            : 'You cancelled the payment. You can retry from this section.',
+        paymentFailedKicker: language.value === 'it' ? 'Pagamento non riuscito' : 'Payment failed',
+        paymentFailedBody: language.value === 'it'
+            ? 'Non siamo riusciti a verificare il pagamento. Riprova da questa sezione.'
+            : 'We could not verify the payment. Please retry from this section.',
         paymentFullLabel: language.value === 'it' ? 'Paga tutto subito' : 'Pay in full now',
         paymentSplitLabel: language.value === 'it' ? '30% ora, 70% piu avanti' : '30% now, 70% later',
         paymentSplitHint: language.value === 'it'

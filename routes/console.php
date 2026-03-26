@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('reservations:send-payment-reminders')->dailyAt('08:00');
 Schedule::command('availability:sync-ics')->everyThirtyMinutes();
+Schedule::command('reservations:verify-pending-availability')->everyThirtyMinutes();
