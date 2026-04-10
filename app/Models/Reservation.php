@@ -34,6 +34,7 @@ class Reservation extends Model
         'discount_percent',
         'total',
         'total_paid',
+        'needs_crib',
         'notes',
     ];
 
@@ -52,6 +53,7 @@ class Reservation extends Model
             'discount_percent' => 'decimal:2',
             'total' => 'decimal:2',
             'total_paid' => 'decimal:2',
+            'needs_crib' => 'boolean',
         ];
     }
 

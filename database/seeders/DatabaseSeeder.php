@@ -30,10 +30,18 @@ class DatabaseSeeder extends Seeder
         );
 
         User::create([
-            'name' => 'Test',
-            'surname' => 'User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password'),
+            'name' => 'Gabriele',
+            'surname' => 'Fuschi',
+            'email' => 'fuschigabriele88@gmail.com',
+            'password' => Hash::make("Gabriele88!"),
+            'user_group_id' => $adminGroup->id,
+        ]);
+
+        User::create([
+            'name' => 'Fabrizio',
+            'surname' => 'Guarino',
+            'email' => 'fabrizio1.guarino@outlook.it',
+            'password' => Hash::make("Fabr5z5698!"),
             'user_group_id' => $adminGroup->id,
         ]);
 

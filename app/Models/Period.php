@@ -19,6 +19,7 @@ class Period extends Model
         'extra_guest_price_2',
         'extra_guest_price_3',
         'extra_guest_price_4',
+        'discount_percentage',
     ];
 
     /**
@@ -33,6 +34,7 @@ class Period extends Model
             'extra_guest_price_2' => 'decimal:2',
             'extra_guest_price_3' => 'decimal:2',
             'extra_guest_price_4' => 'decimal:2',
+            'discount_percentage' => 'decimal:2',
         ];
     }
 

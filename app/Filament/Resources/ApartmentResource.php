@@ -148,6 +148,12 @@ class ApartmentResource extends Resource
                             ->minValue(0)
                             ->step(0.01)
                             ->prefix('€'),
+                        Forms\Components\TextInput::make('tourist_tax')
+                            ->label('Tassa di soggiorno')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€'),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Integrazioni')

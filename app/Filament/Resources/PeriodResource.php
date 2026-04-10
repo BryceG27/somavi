@@ -40,6 +40,12 @@ class PeriodResource extends Resource
                             ->label('A')
                             ->required()
                             ->rule('after:start_date'),
+                        Forms\Components\TextInput::make('discount_percentage')
+                            ->label('Sconto percentuale')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(1)
+                            ->suffix('%')
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Prezzi per notte')
