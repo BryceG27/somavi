@@ -82,6 +82,7 @@ function bookingPayloadForStripeFallback(int $apartmentId, array $overrides = []
     return array_merge([
         'apartment_id' => $apartmentId,
         'email' => 'guest@example.com',
+        'phone' => '+39 333 1234567',
         'name' => 'Mario',
         'surname' => 'Rossi',
         'start_date' => '2026-04-10',

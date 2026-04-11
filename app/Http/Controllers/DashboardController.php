@@ -57,7 +57,7 @@ class DashboardController extends Controller
             return Inertia::render('Home', [
                 'apartment' => null,
                 'auth' => [
-                    'user' => $this->serializeAuthUser($authUser),
+                    'user' => $this->serializeAuthUser($authUser, true),
                 ],
                 'blocked_dates' => [],
                 'reservations' => [],
@@ -108,6 +108,8 @@ class DashboardController extends Controller
                 'extra_guest_price_2' => $apartment->extra_guest_price_2,
                 'extra_guest_price_3' => $apartment->extra_guest_price_3,
                 'extra_guest_price_4' => $apartment->extra_guest_price_4,
+                'tourist_tax' => $apartment->tourist_tax,
+                'cleaning_fee' => $apartment->cleaning_fee,
                 'periods' => $apartment->periods
                     ->map(fn ($period) => [
                         'id' => $period->id,
@@ -118,6 +120,7 @@ class DashboardController extends Controller
                         'extra_guest_price_2' => $period->extra_guest_price_2,
                         'extra_guest_price_3' => $period->extra_guest_price_3,
                         'extra_guest_price_4' => $period->extra_guest_price_4,
+                        'discount_percentage' => $period->discount_percentage,
                     ])
                     ->values(),
                 'cover_image_url' => $cover ? Storage::disk('public_root')->url($cover->path) : null,
@@ -132,7 +135,7 @@ class DashboardController extends Controller
                     ]),
             ],
             'auth' => [
-                'user' => $this->serializeAuthUser($authUser),
+                'user' => $this->serializeAuthUser($authUser, true),
             ],
             'blocked_dates' => $apartment->blockedDates()
                 ->orderBy('start_date')

@@ -51,7 +51,8 @@ class Apartment extends Model
         'extra_guest_price_2',
         'extra_guest_price_3',
         'extra_guest_price_4',
-        'tourist_tax'
+        'tourist_tax',
+        'cleaning_fee',
     ];
 
     /**
@@ -65,6 +66,7 @@ class Apartment extends Model
         'extra_guest_price_3' => 'decimal:2',
         'extra_guest_price_4' => 'decimal:2',
         'tourist_tax' => 'decimal:2',
+        'cleaning_fee' => 'decimal:2',
     ];
 
     public function attachments(): HasMany

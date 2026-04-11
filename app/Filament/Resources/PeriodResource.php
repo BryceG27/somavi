@@ -104,6 +104,10 @@ class PeriodResource extends Resource
                     ->label('Base')
                     ->money('EUR')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('discount_percentage')
+                    ->label('Sconto')
+                    ->suffix('%')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Aggiornato')
                     ->dateTime()

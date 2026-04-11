@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InternalCronController;
+use App\Http\Controllers\ReservationCalendarController;
 use App\Http\Controllers\StripeController;
 use App\Http\Controllers\WebController;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -26,6 +27,8 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::post('/booking-request', [WebController::class, 'bookingRequest'])->name('booking-request.store');
+Route::get('/calendar/{apartment}/reservations.ics', [ReservationCalendarController::class, 'apartmentReservations'])
+    ->name('calendar.apartment-reservations.ics');
 
 Route::post('/payments/stripe/checkout/{reservation}', [StripeController::class, 'checkout'])->name('payments.stripe.checkout');
 Route::get('/payments/stripe/success', [StripeController::class, 'success'])->name('payments.stripe.success');

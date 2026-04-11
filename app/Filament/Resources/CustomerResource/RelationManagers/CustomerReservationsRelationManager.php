@@ -37,6 +37,8 @@ class CustomerReservationsRelationManager extends RelationManager
                     ->numeric()
                     ->minValue(1)
                     ->required(),
+                Forms\Components\Toggle::make('needs_crib')
+                    ->label('Hai bisogno di una culla?'),
                 Forms\Components\DatePicker::make('start_date')
                     ->label('Da')
                     ->required(),
@@ -91,6 +93,9 @@ class CustomerReservationsRelationManager extends RelationManager
                     ]),
                 Tables\Columns\TextColumn::make('guests_count')
                     ->label('Persone'),
+                Tables\Columns\IconColumn::make('needs_crib')
+                    ->label('Culla')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Da')
                     ->date(),

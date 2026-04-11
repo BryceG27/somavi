@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Apartment;
 use App\Models\BlockedDate;
 use App\Models\Payment;
+use App\Models\Period;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\UserGroup;
@@ -80,6 +81,38 @@ class DevSeeder extends Seeder
         );
 
         $today = Carbon::today();
+
+        Period::updateOrCreate(
+            [
+                'apartment_id' => $apartment->id,
+                'name' => 'Promo Last Minute',
+            ],
+            [
+                'start_date' => $today->copy()->addDays(1)->toDateString(),
+                'end_date' => $today->copy()->addDays(45)->toDateString(),
+                'base_price' => 58,
+                'extra_guest_price_2' => 40,
+                'extra_guest_price_3' => 34,
+                'extra_guest_price_4' => 30,
+                'discount_percentage' => 15,
+            ],
+        );
+
+        Period::updateOrCreate(
+            [
+                'apartment_id' => $apartment->id,
+                'name' => 'Promo Mid Season',
+            ],
+            [
+                'start_date' => $today->copy()->addDays(46)->toDateString(),
+                'end_date' => $today->copy()->addDays(90)->toDateString(),
+                'base_price' => 62,
+                'extra_guest_price_2' => 42,
+                'extra_guest_price_3' => 36,
+                'extra_guest_price_4' => 31,
+                'discount_percentage' => 8,
+            ],
+        );
 
         $reservationOne = Reservation::create([
             'customer_id' => $customerOne->id,

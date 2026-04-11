@@ -132,6 +132,118 @@ it('uses the first period pricing when stay crosses into another period', functi
     }
 });
 
+it('applies period discount and adds cleaning fee to the final total', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        fakeStripeCheckout();
+
+        $apartment = createPricingApartment([
+            'base_price' => 100,
+            'extra_guest_price_2' => 20,
+            'extra_guest_price_3' => 30,
+            'extra_guest_price_4' => 40,
+            'cleaning_fee' => 30,
+        ]);
+
+        Period::query()->create([
+            'apartment_id' => $apartment->id,
+            'name' => 'Promo primavera',
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+            'base_price' => 100,
+            'extra_guest_price_2' => 20,
+            'extra_guest_price_3' => 30,
+            'extra_guest_price_4' => 40,
+            'discount_percentage' => 10,
+        ]);
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'start_date' => '2026-04-10',
+            'end_date' => '2026-04-14',
+            'guests_count' => 1,
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->with('payments')->latest('id')->firstOrFail();
+        $pendingPayment = $reservation->payments->firstWhere('status', 'pending');
+
+        expect($pendingPayment)->not->toBeNull()
+            ->and((float) $reservation->subtotal)->toBe(400.0)
+            ->and((float) $reservation->discount_percent)->toBe(10.0)
+            ->and((float) $reservation->total)->toBe(390.0)
+            ->and((float) $pendingPayment->amount)->toBe(390.0);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+it('uses discounted total including cleaning fee for split payments', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        fakeStripeCheckout();
+
+        $apartment = createPricingApartment([
+            'base_price' => 100,
+            'cleaning_fee' => 30,
+        ]);
+
+        Period::query()->create([
+            'apartment_id' => $apartment->id,
+            'name' => 'Promo split',
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+            'base_price' => 100,
+            'discount_percentage' => 10,
+        ]);
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'start_date' => '2026-04-10',
+            'end_date' => '2026-04-14',
+            'guests_count' => 1,
+            'payment_plan' => 'split',
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->with('payments')->latest('id')->firstOrFail();
+        $deposit = $reservation->payments->firstWhere('step', 'deposit');
+        $balance = $reservation->payments->firstWhere('step', 'balance');
+
+        expect($deposit)->not->toBeNull()
+            ->and($balance)->not->toBeNull()
+            ->and((float) $reservation->total)->toBe(390.0)
+            ->and((float) $deposit->amount)->toBe(117.0)
+            ->and((float) $balance->amount)->toBe(273.0);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+it('stores crib preference on reservation', function () {
+    Carbon::setTestNow('2026-03-12');
+
+    try {
+        fakeStripeCheckout();
+
+        $apartment = createPricingApartment();
+
+        $response = $this->post('/booking-request', bookingPayload($apartment->id, [
+            'needs_crib' => true,
+        ]));
+
+        $response->assertRedirect();
+
+        $reservation = Reservation::query()->latest('id')->firstOrFail();
+
+        expect($reservation->needs_crib)->toBeTrue();
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
 /**
  * @param array<string, mixed> $overrides
  */
@@ -162,6 +274,7 @@ function bookingPayload(int $apartmentId, array $overrides = []): array
     return array_merge([
         'apartment_id' => $apartmentId,
         'email' => 'guest@example.com',
+        'phone' => '+39 333 1234567',
         'name' => 'Mario',
         'surname' => 'Rossi',
         'start_date' => '2026-04-10',

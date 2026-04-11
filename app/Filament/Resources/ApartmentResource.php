@@ -154,6 +154,12 @@ class ApartmentResource extends Resource
                             ->minValue(0)
                             ->step(0.01)
                             ->prefix('€'),
+                        Forms\Components\TextInput::make('cleaning_fee')
+                            ->label('Costo pulizia')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('€'),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Integrazioni')

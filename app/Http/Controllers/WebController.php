@@ -77,17 +77,22 @@ class WebController extends Controller
                 ]);
             }
 
-            $request->merge(['email' => $authUser->email]);
+            $request->merge([
+                'email' => $authUser->email,
+                'phone' => trim((string) ($request->input('phone') ?: $authUser->phone)),
+            ]);
         }
 
         $data = $request->validate([
             'apartment_id' => ['required', 'exists:apartments,id'],
             'email' => ['required', 'email'],
+            'phone' => ['required', 'string', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'surname' => ['nullable', 'string', 'max:255'],
             'start_date' => ['required', 'date', 'after:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'guests_count' => ['required', 'integer', 'min:1'],
+            'needs_crib' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
             'payment_plan' => ['nullable', 'in:full,split'],
             'payment_locale' => ['nullable', Rule::in(LocalePreference::supportedLocales())],
@@ -137,6 +142,7 @@ class WebController extends Controller
         );
 
         $email = strtolower(trim((string) $data['email']));
+        $phone = trim((string) $data['phone']);
         $name = trim((string) ($data['name'] ?? ''));
         $surname = trim((string) ($data['surname'] ?? ''));
         $requestedLocale = trim((string) ($data['payment_locale'] ?? ''));
@@ -157,6 +163,7 @@ class WebController extends Controller
                 'name' => $name,
                 'surname' => $surname,
                 'email' => $email,
+                'phone' => $phone,
                 'password' => Hash::make(Str::random(32)),
                 'user_group_id' => $customerGroup->id,
                 'preferred_locale' => $normalizedRequestedLocale ?? LocalePreference::defaultLocale(),
@@ -172,6 +179,10 @@ class WebController extends Controller
                 $updates['surname'] = $surname;
             }
 
+            if ($phone !== '' && $user->phone !== $phone) {
+                $updates['phone'] = $phone;
+            }
+
             if ($normalizedRequestedLocale !== null && $user->preferred_locale !== $normalizedRequestedLocale) {
                 $updates['preferred_locale'] = $normalizedRequestedLocale;
             }
@@ -181,11 +192,16 @@ class WebController extends Controller
             }
         }
 
-        [$base, $extras] = $this->resolvePricingForStartDate($apartment, $startDate);
+        [$base, $extras, $discountPercent] = $this->resolvePricingForStartDate($apartment, $startDate);
         $extraCount = max(0, (int) $data['guests_count'] - 1);
         $perNight = $base + array_sum(array_slice($extras, 0, $extraCount));
         $nights = max(1, $startDate->diffInDays($endDate));
-        $subtotal = $perNight * $nights;
+        $subtotal = round($perNight * $nights, 2);
+        $discountPercent = min(100, max(0, $discountPercent));
+        $discountAmount = round($subtotal * ($discountPercent / 100), 2);
+        $totalAfterDiscount = max(0, round($subtotal - $discountAmount, 2));
+        $cleaningFee = max(0, round((float) ($apartment->cleaning_fee ?? 0), 2));
+        $total = round($totalAfterDiscount + $cleaningFee, 2);
 
         $reservation = Reservation::create([
             'customer_id' => $user->id,
@@ -195,9 +211,10 @@ class WebController extends Controller
             'start_date' => $startDate,
             'end_date' => $endDate,
             'subtotal' => $subtotal,
-            'discount_percent' => 0,
-            'total' => $subtotal,
+            'discount_percent' => $discountPercent,
+            'total' => $total,
             'total_paid' => 0,
+            'needs_crib' => (bool) ($data['needs_crib'] ?? false),
             'notes' => $data['notes'] ?? null,
         ]);
 
@@ -206,8 +223,8 @@ class WebController extends Controller
         $currency = config('services.stripe.currency', 'eur');
 
         if ($paymentPlan === 'split') {
-            $depositAmount = round($subtotal * 0.30, 2);
-            $balanceAmount = round($subtotal - $depositAmount, 2);
+            $depositAmount = round($total * 0.30, 2);
+            $balanceAmount = round($total - $depositAmount, 2);
 
             $reservation->payments()->create([
                 'provider' => 'stripe',
@@ -232,7 +249,7 @@ class WebController extends Controller
                 'provider' => 'stripe',
                 'step' => Payment::STEP_FULL,
                 'status' => Payment::STATUS_PENDING,
-                'amount' => $subtotal,
+                'amount' => $total,
                 'currency' => $currency,
                 'locale' => $locale,
             ]);
@@ -272,7 +289,7 @@ class WebController extends Controller
     }
 
     /**
-     * @return array{0: float, 1: array<int, float>}
+     * @return array{0: float, 1: array<int, float>, 2: float}
      */
     private function resolvePricingForStartDate(Apartment $apartment, Carbon $startDate): array
     {
@@ -291,6 +308,7 @@ class WebController extends Controller
                 (float) ($source->extra_guest_price_3 ?? 0),
                 (float) ($source->extra_guest_price_4 ?? 0),
             ],
+            (float) ($period?->discount_percentage ?? 0),
         ];
     }
 

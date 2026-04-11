@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('apartments', function (Blueprint $table) {
-            $table->decimal('tourist_tax', 8, 2)->nullable()->after('extra_guest_price_4');
+            $table->decimal('cleaning_fee', 8, 2)->default(0)->after('tourist_tax');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('apartments', function (Blueprint $table) {
-            $table->dropColumn('tourist_tax');
+            $table->dropColumn('cleaning_fee');
         });
     }
 };

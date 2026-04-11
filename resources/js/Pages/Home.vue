@@ -339,6 +339,14 @@
                                     {{ bookingForm.errors.guests_count }}
                                 </span>
                             </label>
+                            <label class="flex items-center gap-3 rounded-xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-4 py-3 text-sm text-[color:rgba(30,27,23,0.85)]">
+                                <input
+                                    v-model="bookingForm.needs_crib"
+                                    type="checkbox"
+                                    class="h-4 w-4 accent-[var(--terracotta)]"
+                                />
+                                <span>{{ content.needsCribLabel }}</span>
+                            </label>
                             <div class="space-y-3 text-[color:rgba(30,27,23,0.75)]">
                                 <p class="text-xs font-semibold uppercase tracking-[0.3em]">{{ content.paymentPlanLabel }}</p>
                                 <label class="flex items-center gap-3 text-sm">
@@ -381,19 +389,45 @@
                                         </span>
                                     </label>
                                 </div>
-                                <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
-                                    {{ content.emailLabel }}
-                                    <input
-                                        v-model="bookingForm.email"
-                                        type="email"
-                                        required
-                                        :class="inputClass('email')"
-                                    />
-                                    <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
-                                        {{ bookingForm.errors.email }}
-                                    </span>
-                                </label>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                        {{ content.emailLabel }}
+                                        <input
+                                            v-model="bookingForm.email"
+                                            type="email"
+                                            required
+                                            :class="inputClass('email')"
+                                        />
+                                        <span v-if="bookingForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                            {{ bookingForm.errors.email }}
+                                        </span>
+                                    </label>
+                                    <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                        {{ content.phoneLabel }}
+                                        <input
+                                            v-model="bookingForm.phone"
+                                            type="text"
+                                            required
+                                            :class="inputClass('phone')"
+                                        />
+                                        <span v-if="bookingForm.errors.phone" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                            {{ bookingForm.errors.phone }}
+                                        </span>
+                                    </label>
+                                </div>
                             </div>
+                            <label v-if="isAuthenticated" class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                {{ content.phoneLabel }}
+                                <input
+                                    v-model="bookingForm.phone"
+                                    type="text"
+                                    required
+                                    :class="inputClass('phone')"
+                                />
+                                <span v-if="bookingForm.errors.phone" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                    {{ bookingForm.errors.phone }}
+                                </span>
+                            </label>
                             <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                 {{ content.notesLabel }}
                                 <textarea v-model="bookingForm.notes" rows="4" :class="inputClass('notes')"></textarea>
@@ -445,6 +479,10 @@
                                         <span>{{ content.extraGuestLabel }} 4</span>
                                         <span>+ {{ formatCurrency(pricing.extra4) }}</span>
                                     </li>
+                                    <li v-if="pricing.discountPercentage > 0" class="flex items-center justify-between">
+                                        <span>{{ content.periodDiscountLabel }}</span>
+                                        <span>- {{ formatPercent(pricing.discountPercentage) }}</span>
+                                    </li>
                                 </ul>
                                 <p
                                     v-else
@@ -473,12 +511,50 @@
                                     <span>{{ content.perNightLabel }}</span>
                                     <span>{{ pricing.totalForGuests === null ? '-' : formatCurrency(pricing.totalForGuests) }}</span>
                                 </div>
+                                <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                    <span>{{ content.totalStayBeforeDiscountLabel }}</span>
+                                    <span>{{ bookingPricingBreakdown === null ? '-' : formatCurrency(bookingPricingBreakdown.staySubtotal) }}</span>
+                                </div>
+                                <div
+                                    v-if="bookingPricingBreakdown !== null && bookingPricingBreakdown.discountPercent > 0"
+                                    class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]"
+                                >
+                                    <span>{{ content.discountAppliedLabel }} {{ formatPercent(bookingPricingBreakdown.discountPercent) }}</span>
+                                    <span>- {{ formatCurrency(bookingPricingBreakdown.discountAmount) }}</span>
+                                </div>
+                                <div
+                                    v-if="bookingPricingBreakdown !== null && bookingPricingBreakdown.discountPercent > 0"
+                                    class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]"
+                                >
+                                    <span>{{ content.totalDiscountedLabel }}</span>
+                                    <span class="text-right">
+                                        <span class="mr-2 text-red-600 line-through">
+                                            {{ formatCurrency(bookingPricingBreakdown.staySubtotal) }}
+                                        </span>
+                                        <span>{{ formatCurrency(bookingPricingBreakdown.discountedStayTotal) }}</span>
+                                    </span>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.3em]">
+                                    <span>{{ content.cleaningFeeLabel }}</span>
+                                    <span>+ {{ bookingPricingBreakdown === null ? '-' : formatCurrency(bookingPricingBreakdown.cleaningFee) }}</span>
+                                </div>
                                 <div class="mt-4 border-t border-black/10 pt-3">
                                     <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em]">
-                                        <span>{{ content.totalStayLabel }}</span>
+                                        <span>{{ content.totalStayFinalLabel }}</span>
                                         <span>{{ bookingTotal === null ? '-' : formatCurrency(bookingTotal) }}</span>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4 text-[color:rgba(30,27,23,0.75)]">
+                                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                                    {{ content.touristTaxTitle }}
+                                </p>
+                                <p class="mt-2 text-sm leading-relaxed">
+                                    {{ content.touristTaxBody }}
+                                </p>
+                                <p v-if="apartmentTouristTax > 0" class="mt-3 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.65)]">
+                                    {{ content.touristTaxRatePrefix }} {{ formatCurrency(apartmentTouristTax) }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -681,9 +757,11 @@ const bookingForm = useForm({
     start_date: '',
     end_date: '',
     guests_count: 1,
+    needs_crib: false,
     name: '',
     surname: '',
     email: '',
+    phone: '',
     notes: '',
     payment_plan: 'full',
     payment_locale: '',
@@ -981,6 +1059,16 @@ watch(
 );
 
 watch(
+    () => props.auth?.user?.phone,
+    (value) => {
+        if (value) {
+            bookingForm.phone = value;
+        }
+    },
+    { immediate: true },
+);
+
+watch(
     () => language.value,
     (value) => {
         const normalizedLocale = normalizeLocaleCode(value);
@@ -1080,12 +1168,19 @@ const submitBooking = () => {
         bookingForm.email = props.auth.user.email;
     }
 
+    if (props.auth?.user?.phone) {
+        bookingForm.phone = props.auth.user.phone;
+    }
+
     bookingForm.post(bookingRequestUrl.value, {
         preserveScroll: true,
         onSuccess: () => {
-            const fields = ['start_date', 'end_date', 'guests_count', 'name', 'surname', 'notes'];
+            const fields = ['start_date', 'end_date', 'guests_count', 'needs_crib', 'name', 'surname', 'notes'];
             if (!props.auth?.user?.email) {
                 fields.push('email');
+            }
+            if (!props.auth?.user?.phone) {
+                fields.push('phone');
             }
             bookingForm.reset(...fields);
             bookingForm.payment_plan = 'full';
@@ -1188,9 +1283,11 @@ const content = computed(() => {
         departureLabel: language.value === 'it' ? 'Partenza' : 'Departure date',
         nameLabel: language.value === 'it' ? 'Nome' : 'Name',
         emailLabel: language.value === 'it' ? 'Email' : 'Email',
+        phoneLabel: language.value === 'it' ? 'Telefono' : 'Phone',
         notesLabel: language.value === 'it' ? 'Note' : 'Notes',
         surnameLabel: language.value === 'it' ? 'Cognome' : 'Last name',
         guestsFormLabel: language.value === 'it' ? 'Ospiti' : 'Guests',
+        needsCribLabel: language.value === 'it' ? 'Hai bisogno di una culla?' : 'Do you need a crib?',
         bookingSubmitLabel: language.value === 'it' ? 'Invia richiesta' : 'Send request',
         validationErrorTitle: language.value === 'it' ? 'Correggi i campi evidenziati' : 'Please review the highlighted fields',
         apartmentRequiredError: language.value === 'it'
@@ -1215,10 +1312,21 @@ const content = computed(() => {
         pricingTitle: language.value === 'it' ? 'Prezzi per notte' : 'Nightly pricing',
         basePriceLabel: language.value === 'it' ? 'Prezzo base (1 ospite)' : 'Base price (1 guest)',
         extraGuestLabel: language.value === 'it' ? 'Supplemento ospite' : 'Extra guest',
+        periodDiscountLabel: language.value === 'it' ? 'Sconto periodo' : 'Period discount',
         totalLabel: language.value === 'it' ? 'Totale ospiti' : 'Guest total',
         nightsLabel: language.value === 'it' ? 'Notti' : 'Nights',
         totalStayLabel: language.value === 'it' ? 'Totale soggiorno' : 'Stay total',
+        totalStayBeforeDiscountLabel: language.value === 'it' ? 'Totale soggiorno' : 'Stay total',
+        discountAppliedLabel: language.value === 'it' ? 'Sconto applicato' : 'Applied discount',
+        totalDiscountedLabel: language.value === 'it' ? 'Totale scontato' : 'Discounted total',
+        cleaningFeeLabel: language.value === 'it' ? 'Costo pulizia' : 'Cleaning fee',
+        totalStayFinalLabel: language.value === 'it' ? 'Totale finale' : 'Final total',
         perNightLabel: language.value === 'it' ? 'Per notte' : 'Per night',
+        touristTaxTitle: language.value === 'it' ? 'Tassa di soggiorno' : 'Tourist tax',
+        touristTaxBody: language.value === 'it'
+            ? 'La tassa di soggiorno si paga in loco e in contanti a fine soggiorno. Dal quarto giorno non si paga e i minori di 14 anni non pagano.'
+            : 'Tourist tax must be paid on site, in cash, at the end of the stay. It is not charged after the third day, and guests under 14 do not pay.',
+        touristTaxRatePrefix: language.value === 'it' ? 'Importo indicativo:' : 'Indicative amount:',
         pricingNote: language.value === 'it'
             ? 'Il prezzo finale puo variare in base al periodo.'
             : 'Final pricing may vary depending on the season.',
@@ -1269,6 +1377,7 @@ const pricing = computed(() => {
             extra2: null,
             extra3: null,
             extra4: null,
+            discountPercentage: 0,
             totalForGuests: null,
         };
     }
@@ -1278,6 +1387,7 @@ const pricing = computed(() => {
     const extra2 = Number(source.extra_guest_price_2 ?? 0);
     const extra3 = Number(source.extra_guest_price_3 ?? 0);
     const extra4 = Number(source.extra_guest_price_4 ?? 0);
+    const discountPercentage = Number(activePricingPeriod.value?.discount_percentage ?? 0);
     const extraPrices = [extra2, extra3, extra4];
     const extras = extraPrices.slice(0, Math.max(0, bookingForm.guests_count - 1));
     const totalForGuests = base + extras.reduce((sum, price) => sum + price, 0);
@@ -1287,6 +1397,7 @@ const pricing = computed(() => {
         extra2,
         extra3,
         extra4,
+        discountPercentage,
         totalForGuests,
     };
 });
@@ -1304,13 +1415,37 @@ const bookingNights = computed(() => {
     return diffDays > 0 ? diffDays : 0;
 });
 
-const bookingTotal = computed(() => {
+const bookingPricingBreakdown = computed(() => {
     if (pricing.value.totalForGuests === null) {
         return null;
     }
 
-    return pricing.value.totalForGuests * bookingNights.value;
+    const staySubtotal = Math.round(pricing.value.totalForGuests * bookingNights.value * 100) / 100;
+    const discountPercent = Math.min(100, Math.max(0, Number(pricing.value.discountPercentage ?? 0)));
+    const discountAmount = Math.round(staySubtotal * (discountPercent / 100) * 100) / 100;
+    const discountedStayTotal = Math.max(0, Math.round((staySubtotal - discountAmount) * 100) / 100);
+    const cleaningFee = Math.max(0, Number(props.apartment?.cleaning_fee ?? 0));
+    const finalTotal = Math.round((discountedStayTotal + cleaningFee) * 100) / 100;
+
+    return {
+        staySubtotal,
+        discountPercent,
+        discountAmount,
+        discountedStayTotal,
+        cleaningFee,
+        finalTotal,
+    };
 });
+
+const bookingTotal = computed(() => {
+    if (bookingPricingBreakdown.value === null) {
+        return null;
+    }
+
+    return bookingPricingBreakdown.value.finalTotal;
+});
+
+const apartmentTouristTax = computed(() => Math.max(0, Number(props.apartment?.tourist_tax ?? 0)));
 
 const guestOptions = computed(() => {
     const maxGuests = Math.min(Number(props.apartment?.max_guests ?? 4), 4);
@@ -1321,6 +1456,18 @@ const formatCurrency = (value) => new Intl.NumberFormat(language.value === 'it' 
     style: 'currency',
     currency: 'EUR',
 }).format(Number.isFinite(value) ? value : 0);
+
+const formatPercent = (value) => {
+    const normalized = Number(value || 0);
+
+    if (!Number.isFinite(normalized)) {
+        return '0%';
+    }
+
+    return Number.isInteger(normalized)
+        ? `${normalized}%`
+        : `${normalized.toFixed(2)}%`;
+};
 
 const heroImage = computed(() => props.apartment?.cover_image_url ?? null);
 

@@ -61,6 +61,8 @@ class ReservationResource extends Resource
                             ->numeric()
                             ->minValue(1)
                             ->required(),
+                        Forms\Components\Toggle::make('needs_crib')
+                            ->label('Hai bisogno di una culla?'),
                         Forms\Components\DatePicker::make('start_date')
                             ->label('Da')
                             ->required()
@@ -185,6 +187,9 @@ class ReservationResource extends Resource
                 Tables\Columns\TextColumn::make('guests_count')
                     ->label('Persone')
                     ->sortable(),
+                Tables\Columns\IconColumn::make('needs_crib')
+                    ->label('Culla')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Da')
                     ->date()
