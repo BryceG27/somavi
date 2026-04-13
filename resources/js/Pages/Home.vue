@@ -389,7 +389,7 @@
                                         </span>
                                     </label>
                                 </div>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="space-y-4">
                                     <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
                                         {{ content.emailLabel }}
                                         <input

@@ -36,8 +36,44 @@
                     {{ copy.subtitle }}
                 </p>
 
+                <div class="mt-8 rounded-2xl border border-black/10 bg-[color:rgba(30,27,23,0.03)] px-5 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.7)]">
+                        {{ copy.bookingCompletionPrompt }}
+                    </p>
+                    <form class="mt-4 space-y-3" @submit.prevent="findBookingAccount">
+                        <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                            {{ copy.emailLabel }}
+                            <input
+                                v-model="accountCompletionForm.email"
+                                type="email"
+                                class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                                autocomplete="email"
+                            />
+                            <span v-if="accountCompletionForm.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
+                                {{ accountCompletionForm.errors.email }}
+                            </span>
+                        </label>
+                        <button
+                            type="submit"
+                            class="rounded-full border border-black/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.3em] hover:bg-[color:rgba(0,0,0,0.05)]"
+                            :disabled="accountCompletionForm.processing"
+                        >
+                            {{ copy.bookingCompletionCta }}
+                        </button>
+                    </form>
+                    <p v-if="hasAccountCompletionPrefill" class="mt-3 text-xs uppercase tracking-[0.25em] text-emerald-700">
+                        {{ copy.bookingCompletionFound }}
+                    </p>
+                    <p v-else-if="hasAccountCompletionRequest" class="mt-3 text-xs uppercase tracking-[0.25em] text-amber-700">
+                        {{ copy.bookingCompletionNotFound }}
+                    </p>
+                </div>
+
                 <form class="mt-8 space-y-5" @submit.prevent="submit">
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <p v-if="hasAccountCompletionPrefill" class="text-xs uppercase tracking-[0.25em] text-[color:rgba(30,27,23,0.7)]">
+                        {{ copy.bookingCompletionBody }}
+                    </p>
+                    <div v-if="!hasAccountCompletionPrefill" class="grid gap-4 md:grid-cols-2">
                         <label class="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
                             {{ copy.nameLabel }}
                             <input
@@ -68,7 +104,11 @@
                         <input
                             v-model="form.email"
                             type="email"
-                            class="rounded-xl border border-black/15 bg-white px-4 py-3 text-base text-[var(--ink)]"
+                            :readonly="hasAccountCompletionPrefill"
+                            :class="[
+                                'rounded-xl border border-black/15 px-4 py-3 text-base text-[var(--ink)]',
+                                hasAccountCompletionPrefill ? 'bg-[color:rgba(30,27,23,0.05)]' : 'bg-white',
+                            ]"
                             autocomplete="email"
                         />
                         <span v-if="form.errors.email" class="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--terracotta)]">
@@ -123,6 +163,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 
+const props = defineProps({
+    account_completion: {
+        type: Object,
+        default: () => ({}),
+    },
+});
+
 const language = ref('en');
 const page = usePage();
 const localization = computed(() => page.props.localization || {});
@@ -169,6 +216,30 @@ const currentLocale = computed(() => {
 
     return supportedLocales.value.includes(locale) ? locale : '';
 });
+const accountCompletion = computed(() => (
+    props.account_completion && typeof props.account_completion === 'object'
+        ? props.account_completion
+        : {}
+));
+const accountCompletionPrefill = computed(() => {
+    const value = accountCompletion.value.prefill;
+
+    if (!accountCompletion.value.found || !value || typeof value !== 'object') {
+        return null;
+    }
+
+    return {
+        name: String(value.name || ''),
+        surname: String(value.surname || ''),
+        email: String(value.email || ''),
+    };
+});
+const hasAccountCompletionPrefill = computed(() => !!accountCompletionPrefill.value?.email);
+const hasAccountCompletionRequest = computed(() => {
+    const requestedEmail = String(accountCompletion.value.requested_email || '').trim();
+
+    return requestedEmail !== '' && !hasAccountCompletionPrefill.value;
+});
 
 const pickDefaultLanguage = () => {
     if (currentLocale.value) {
@@ -209,12 +280,15 @@ onMounted(() => {
 });
 
 const form = useForm({
-    name: '',
-    surname: '',
-    email: '',
+    name: accountCompletionPrefill.value?.name || '',
+    surname: accountCompletionPrefill.value?.surname || '',
+    email: accountCompletionPrefill.value?.email || '',
     password: '',
     password_confirmation: '',
     preferred_locale: '',
+});
+const accountCompletionForm = useForm({
+    email: String(accountCompletion.value.requested_email || ''),
 });
 const routes = computed(() => ({
     home: page.props.routes?.home || '/',
@@ -228,6 +302,25 @@ const withLocale = (template, locale) => (
 
 const submit = () => {
     form.post(routes.value.register);
+};
+
+const findBookingAccount = () => {
+    const email = String(accountCompletionForm.email || '').trim();
+
+    accountCompletionForm.clearErrors();
+
+    if (email === '') {
+        accountCompletionForm.setError('email', copy.value.bookingCompletionEmailRequired);
+        return;
+    }
+
+    router.get(routes.value.register, {
+        booking_email: email,
+    }, {
+        preserveScroll: true,
+        preserveState: false,
+        replace: true,
+    });
 };
 
 const onLanguageChange = (event) => {
@@ -260,6 +353,28 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => accountCompletionPrefill.value,
+    (value) => {
+        if (!value) {
+            return;
+        }
+
+        form.name = value.name;
+        form.surname = value.surname;
+        form.email = value.email;
+    },
+    { immediate: true },
+);
+
+watch(
+    () => accountCompletion.value.requested_email,
+    (value) => {
+        accountCompletionForm.email = String(value || '');
+    },
+    { immediate: true },
+);
+
 const copy = computed(() => (language.value === 'it'
     ? {
         pageTitle: 'Registrati',
@@ -272,6 +387,12 @@ const copy = computed(() => (language.value === 'it'
         emailLabel: 'Email',
         passwordLabel: 'Password',
         passwordConfirmLabel: 'Conferma password',
+        bookingCompletionPrompt: 'Hai effettuato una prenotazione, ma non sei ancora registrato?',
+        bookingCompletionBody: 'Abbiamo recuperato i tuoi dati. Imposta solo la password per completare l\'account.',
+        bookingCompletionCta: 'Completa account',
+        bookingCompletionFound: 'Account trovato: imposta la password.',
+        bookingCompletionNotFound: 'Nessuna prenotazione trovata con questa email.',
+        bookingCompletionEmailRequired: 'Inserisci una email valida.',
         submitLabel: 'Crea account',
         loginPrompt: 'Hai gia un account?',
         loginCta: 'Accedi',
@@ -287,6 +408,12 @@ const copy = computed(() => (language.value === 'it'
         emailLabel: 'Email',
         passwordLabel: 'Password',
         passwordConfirmLabel: 'Confirm password',
+        bookingCompletionPrompt: 'Have you made a booking but are not registered yet?',
+        bookingCompletionBody: 'We found your details. Set only your password to complete your account.',
+        bookingCompletionCta: 'Complete account',
+        bookingCompletionFound: 'Account found: set your password.',
+        bookingCompletionNotFound: 'No booking was found with this email.',
+        bookingCompletionEmailRequired: 'Please enter a valid email.',
         submitLabel: 'Create account',
         loginPrompt: 'Already have an account?',
         loginCta: 'Sign in',

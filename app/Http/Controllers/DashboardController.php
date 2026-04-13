@@ -250,11 +250,19 @@ class DashboardController extends Controller
                             $effectiveStatus = Reservation::STATUS_PENDING;
                         }
 
+                        $hasSplitPayments = $reservation->payments->contains(
+                            fn (Payment $payment) => in_array($payment->step, [Payment::STEP_DEPOSIT, Payment::STEP_BALANCE], true)
+                        );
+
                         return [
                             'id' => $reservation->id,
                             'status' => $effectiveStatus,
                             'start_date' => $reservation->start_date?->toDateString(),
                             'end_date' => $reservation->end_date?->toDateString(),
+                            'guests_count' => (int) $reservation->guests_count,
+                            'needs_crib' => (bool) $reservation->needs_crib,
+                            'notes' => $reservation->notes,
+                            'payment_plan' => $hasSplitPayments ? 'split' : 'full',
                             'total' => $total,
                             'total_paid' => $totalCovered,
                             'total_paid_settled' => $paidSettled,

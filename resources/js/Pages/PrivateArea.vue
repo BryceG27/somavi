@@ -156,6 +156,43 @@
                                 >
                                     {{ reservationStatusLabel(reservation.status) }}
                                 </span>
+                                <div class="mt-4">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-black/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] hover:bg-[color:rgba(0,0,0,0.05)]"
+                                        @click="toggleReservationInfo(reservation.id)"
+                                    >
+                                        {{ isReservationInfoOpen(reservation.id) ? copy.hideInfo : copy.showInfo }}
+                                    </button>
+                                </div>
+                                <div
+                                    v-if="isReservationInfoOpen(reservation.id)"
+                                    class="mt-4 rounded-xl border border-black/10 bg-white px-4 py-4 text-[color:rgba(30,27,23,0.8)]"
+                                >
+                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                        {{ copy.bookingInfoTitle }}
+                                    </p>
+                                    <dl class="mt-3 space-y-2 text-sm">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.guestsCountLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservation.guests_count }}</dd>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.needsCribLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservationNeedsCribLabel(reservation.needs_crib) }}</dd>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.paymentPlanSummaryLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservationPaymentPlanLabel(reservation.payment_plan) }}</dd>
+                                        </div>
+                                        <div class="flex items-start justify-between gap-4">
+                                            <dt>{{ copy.notesLabel }}</dt>
+                                            <dd class="max-w-[70%] text-right font-semibold whitespace-pre-wrap break-words">
+                                                {{ reservationNotesValue(reservation) }}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
                                 <div
                                     v-if="canPayReservation(reservation)"
                                     class="mt-4 rounded-xl border border-black/10 bg-white px-4 py-3 text-[color:rgba(30,27,23,0.8)]"
@@ -229,6 +266,43 @@
                                 >
                                     {{ reservationStatusLabel(reservation.status) }}
                                 </span>
+                                <div class="mt-4">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-black/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] hover:bg-[color:rgba(0,0,0,0.05)]"
+                                        @click="toggleReservationInfo(reservation.id)"
+                                    >
+                                        {{ isReservationInfoOpen(reservation.id) ? copy.hideInfo : copy.showInfo }}
+                                    </button>
+                                </div>
+                                <div
+                                    v-if="isReservationInfoOpen(reservation.id)"
+                                    class="mt-4 rounded-xl border border-black/10 bg-white px-4 py-4 text-[color:rgba(30,27,23,0.8)]"
+                                >
+                                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-[color:rgba(30,27,23,0.6)]">
+                                        {{ copy.bookingInfoTitle }}
+                                    </p>
+                                    <dl class="mt-3 space-y-2 text-sm">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.guestsCountLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservation.guests_count }}</dd>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.needsCribLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservationNeedsCribLabel(reservation.needs_crib) }}</dd>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <dt>{{ copy.paymentPlanSummaryLabel }}</dt>
+                                            <dd class="font-semibold">{{ reservationPaymentPlanLabel(reservation.payment_plan) }}</dd>
+                                        </div>
+                                        <div class="flex items-start justify-between gap-4">
+                                            <dt>{{ copy.notesLabel }}</dt>
+                                            <dd class="max-w-[70%] text-right font-semibold whitespace-pre-wrap break-words">
+                                                {{ reservationNotesValue(reservation) }}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
                                 <div
                                     v-if="canPayReservation(reservation)"
                                     class="mt-4 rounded-xl border border-black/10 bg-white px-4 py-3 text-[color:rgba(30,27,23,0.8)]"
@@ -288,6 +362,7 @@ const paymentState = ref('');
 const payingReservationId = ref(null);
 const paymentActionError = ref('');
 const profileSavedSuccess = ref(false);
+const openReservationInfoId = ref(null);
 const page = usePage();
 const localization = computed(() => page.props.localization || {});
 const LOCALE_STORAGE_KEY = 'somavi.locale';
@@ -464,6 +539,11 @@ const canPayReservation = (reservation) => (
 );
 
 const isPayingReservation = (reservationId) => payingReservationId.value === reservationId;
+const isReservationInfoOpen = (reservationId) => openReservationInfoId.value === reservationId;
+
+const toggleReservationInfo = (reservationId) => {
+    openReservationInfoId.value = openReservationInfoId.value === reservationId ? null : reservationId;
+};
 
 const paymentStepLabel = (step) => {
     if (step === 'deposit') {
@@ -487,6 +567,20 @@ const paymentButtonLabel = (reservation) => {
     }
 
     return copy.value.payFull;
+};
+
+const reservationPaymentPlanLabel = (paymentPlan) => (
+    paymentPlan === 'split' ? copy.value.paymentPlanSplit : copy.value.paymentPlanFull
+);
+
+const reservationNeedsCribLabel = (needsCrib) => (
+    needsCrib ? copy.value.yesLabel : copy.value.noLabel
+);
+
+const reservationNotesValue = (reservation) => {
+    const notes = String(reservation?.notes ?? '').trim();
+
+    return notes !== '' ? notes : copy.value.noNotesValue;
 };
 
 const payReservation = async (reservation) => {
@@ -654,6 +748,18 @@ const copy = computed(() => (language.value === 'it'
         noBookingBody: 'Quando effettuerai una prenotazione, la vedrai apparire qui con i dettagli del soggiorno.',
         noStaysTitle: 'Nessun soggiorno passato',
         noStaysBody: 'Quando avrai soggiornato, troverai qui il riepilogo delle tue esperienze.',
+        showInfo: 'Info',
+        hideInfo: 'Chiudi info',
+        bookingInfoTitle: 'Dettagli prenotazione',
+        guestsCountLabel: 'Ospiti',
+        needsCribLabel: 'Richiesta culla',
+        paymentPlanSummaryLabel: 'Piano pagamento',
+        paymentPlanFull: 'Totale',
+        paymentPlanSplit: 'Caparra + saldo',
+        notesLabel: 'Note',
+        noNotesValue: 'Nessuna',
+        yesLabel: 'Si',
+        noLabel: 'No',
         paymentAuthorizedKicker: 'Pagamento autorizzato',
         paymentAuthorizedBody: 'Il pagamento e stato autorizzato. Stiamo verificando la disponibilita e ti confermeremo a breve.',
         paymentPaidKicker: 'Pagamento completato',
@@ -708,6 +814,18 @@ const copy = computed(() => (language.value === 'it'
         noBookingBody: 'When you book a stay, it will appear here with all the details.',
         noStaysTitle: 'No past stays',
         noStaysBody: 'After your stay, you will find a summary of your experiences here.',
+        showInfo: 'Info',
+        hideInfo: 'Hide info',
+        bookingInfoTitle: 'Booking details',
+        guestsCountLabel: 'Guests',
+        needsCribLabel: 'Crib request',
+        paymentPlanSummaryLabel: 'Payment plan',
+        paymentPlanFull: 'Full payment',
+        paymentPlanSplit: 'Deposit + balance',
+        notesLabel: 'Notes',
+        noNotesValue: 'None',
+        yesLabel: 'Yes',
+        noLabel: 'No',
         paymentAuthorizedKicker: 'Payment authorized',
         paymentAuthorizedBody: 'Your payment has been authorized. We are checking availability and will confirm shortly.',
         paymentPaidKicker: 'Payment completed',

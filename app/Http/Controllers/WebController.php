@@ -327,13 +327,34 @@ class WebController extends Controller
         return back();
     }
 
-    public function showRegister()
+    public function showRegister(Request $request)
     {
         if (Auth::check()) {
             return to_route('private-area.index');
         }
 
-        return Inertia::render('Register');
+        $requestedEmail = strtolower(trim((string) $request->query('booking_email', '')));
+        $completionCandidate = null;
+
+        if ($requestedEmail !== '') {
+            $completionCandidate = User::query()
+                ->where('email', $requestedEmail)
+                ->whereHas('userGroup', fn ($query) => $query->where('slug', UserGroup::CUSTOMER_SLUG))
+                ->whereHas('reservations')
+                ->first();
+        }
+
+        return Inertia::render('Register', [
+            'account_completion' => [
+                'requested_email' => $requestedEmail !== '' ? $requestedEmail : null,
+                'found' => (bool) $completionCandidate,
+                'prefill' => $completionCandidate ? [
+                    'name' => $completionCandidate->name,
+                    'surname' => $completionCandidate->surname,
+                    'email' => $completionCandidate->email,
+                ] : null,
+            ],
+        ]);
     }
 
     public function register(Request $request)
@@ -345,6 +366,8 @@ class WebController extends Controller
             'password' => ['required', 'min:8', 'confirmed'],
             'preferred_locale' => ['nullable', Rule::in(LocalePreference::supportedLocales())],
         ]);
+
+        $data['email'] = strtolower(trim((string) $data['email']));
 
         $group = UserGroup::firstOrCreate(
             ['slug' => UserGroup::CUSTOMER_SLUG],
