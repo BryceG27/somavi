@@ -6,7 +6,9 @@ use App\Http\Controllers\ReservationCalendarController;
 use App\Http\Controllers\StripeController;
 use App\Http\Controllers\WebController;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
@@ -44,6 +46,46 @@ Route::match(['GET', 'POST'], '/internal/cron/sync-ics', [InternalCronController
     ->withoutMiddleware([VerifyCsrfToken::class]);
 
 Route::prefix('commands')->group(function() {
+    Route::get('/run-manual', function (Request $request) {
+        $user = $request->user();
+        abort_unless($user, 403);
+
+        Artisan::call('schedule:run', [
+            '--no-interaction' => true,
+        ]);
+        $scheduleOutput = trim((string) Artisan::output());
+
+        Artisan::call('queue:work', [
+            '--once' => true,
+            '--queue' => 'default',
+            '--tries' => 3,
+            '--no-interaction' => true,
+        ]);
+        $queueOutput = trim((string) Artisan::output());
+
+        $name = trim((string) ($user->full_name ?? ''));
+        if ($name === '') {
+            $name = (string) ($user->email ?? 'Utente sconosciuto');
+        }
+
+        Log::info(sprintf(
+            '%s ha avviato manualmente i Commands in data %s',
+            $name,
+            now()->format('d/m H:s')
+        ), [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'path' => $request->path(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Comandi avviati manualmente.',
+            'schedule_output' => $scheduleOutput,
+            'queue_output' => $queueOutput,
+        ]);
+    })->middleware('auth')->name('commands.run-manual');
+
     Route::get('/clear-cache', function() {
         Artisan::call('cache:clear');
         return 'Cache cleared';

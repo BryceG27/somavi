@@ -13,15 +13,7 @@ class InternalCronController extends Controller
 {
     public function syncIcs(Request $request, ExternalCalendarSyncService $syncService): JsonResponse
     {
-        $expectedToken = trim((string) config('services.availability.cron_token', ''));
-        $providedToken = trim((string) (
-            $request->header('X-CRON-TOKEN')
-            ?? $request->query('token')
-            ?? $request->input('token')
-            ?? ''
-        ));
-
-        if ($expectedToken === '' || ! hash_equals($expectedToken, $providedToken)) {
+        if (! $this->hasValidToken($request)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Unauthorized.',
@@ -58,5 +50,18 @@ class InternalCronController extends Controller
         } finally {
             optional($lock)->release();
         }
+    }
+
+    private function hasValidToken(Request $request): bool
+    {
+        $expectedToken = trim((string) config('services.availability.cron_token', ''));
+        $providedToken = trim((string) (
+            $request->header('X-CRON-TOKEN')
+            ?? $request->query('token')
+            ?? $request->input('token')
+            ?? ''
+        ));
+
+        return $expectedToken !== '' && hash_equals($expectedToken, $providedToken);
     }
 }
