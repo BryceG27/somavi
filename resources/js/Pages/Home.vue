@@ -42,7 +42,19 @@
                         <a href="#contact" class="transition hover:text-white/70">{{ content.nav.contact }}</a>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="relative">
+                        <div class="relative md:hidden">
+                            <select
+                                v-model="language"
+                                @change="onLanguageChange"
+                                class="w-20 appearance-none rounded-full border border-white/30 bg-white/10 px-4 py-2 pr-9 text-[11px] font-semibold uppercase tracking-[0.3em] text-white"
+                            >
+                                <option v-for="locale in supportedLocales" :key="locale" :value="locale">
+                                    {{ localeShortCode(locale) }}
+                                </option>
+                            </select>
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/80">▾</span>
+                        </div>
+                        <div class="relative hidden md:block">
                             <select
                                 v-model="language"
                                 @change="onLanguageChange"
@@ -89,7 +101,7 @@
                     <p class="mt-6 max-w-2xl text-base leading-relaxed text-white/85">
                         {{ content.heroBody || content.description }}
                     </p>
-                    <div class="mt-10 flex flex-wrap items-center gap-4">
+                    <div class="mt-10 flex w-full flex-wrap items-center justify-end gap-4 md:w-auto md:justify-start">
                         <Button
                             v-if="content.primaryCta"
                             :label="content.primaryCta"
@@ -182,23 +194,58 @@
                         {{ content.galleryBody }}
                     </p>
                 </div>
-                <div class="mt-10 grid gap-6 md:grid-cols-3">
-                    <div
-                        v-for="image in galleryImages"
-                        :key="image.id"
-                        class="group relative aspect-[4/3] overflow-hidden rounded-3xl border border-black/10"
-                    >
+                <div v-if="hasGalleryImages" class="mt-10 space-y-4">
+                    <div class="relative aspect-[4/3] overflow-hidden rounded-3xl border border-black/10 bg-black/5 sm:aspect-[16/10]">
+                        <button
+                            type="button"
+                            class="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/45 p-3 text-white transition hover:bg-black/65 disabled:cursor-default disabled:opacity-50"
+                            :disabled="galleryImages.length < 2"
+                            @click="showPreviousGalleryImage"
+                            aria-label="Previous image"
+                        >
+                            <i class="pi pi-angle-left text-sm"></i>
+                        </button>
                         <img
-                            :src="image.url"
+                            v-if="activeGalleryImage"
+                            :src="activeGalleryImage.url"
                             :alt="content.galleryImageAlt"
-                            class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                            class="h-full w-full cursor-zoom-in object-cover"
                             loading="lazy"
+                            @click="openGalleryPreview()"
                         />
-                        <div class="absolute inset-0 bg-black/20 opacity-0 transition group-hover:opacity-100"></div>
+                        <button
+                            type="button"
+                            class="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/45 p-3 text-white transition hover:bg-black/65 disabled:cursor-default disabled:opacity-50"
+                            :disabled="galleryImages.length < 2"
+                            @click="showNextGalleryImage"
+                            aria-label="Next image"
+                        >
+                            <i class="pi pi-angle-right text-sm"></i>
+                        </button>
+                        <span class="absolute bottom-4 right-4 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white">
+                            {{ galleryCarouselIndex + 1 }} / {{ galleryImages.length }}
+                        </span>
                     </div>
-                    <div v-if="galleryImages.length === 0" class="rounded-3xl border border-black/10 bg-white p-8 text-[color:rgba(30,27,23,0.8)]">
+                    <div class="flex gap-3 overflow-x-auto pb-2">
+                        <button
+                            v-for="(image, index) in galleryImages"
+                            :key="image.id ?? image.url ?? index"
+                            type="button"
+                            class="h-20 w-28 shrink-0 overflow-hidden rounded-2xl border transition sm:h-24 sm:w-36"
+                            :class="galleryCarouselIndex === index ? 'border-[var(--terracotta)] ring-2 ring-[var(--terracotta)]/30' : 'border-black/15'"
+                            @click="setGalleryImage(index)"
+                        >
+                            <img
+                                :src="image.url"
+                                :alt="content.galleryImageAlt"
+                                class="h-full w-full object-cover"
+                                loading="lazy"
+                            />
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="mt-10 rounded-3xl border border-black/10 bg-white p-8 text-[color:rgba(30,27,23,0.8)]">
                         {{ content.galleryEmpty }}
-                    </div>
                 </div>
             </section>
 
@@ -659,6 +706,53 @@
             </div>
         </Dialog>
 
+        <Dialog
+            v-model:visible="galleryPreviewVisible"
+            modal
+            dismissableMask
+            :header="content.galleryHeadline"
+            class="w-[96vw] max-w-6xl"
+        >
+            <div v-if="activeGalleryImage" class="space-y-4">
+                <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-black sm:aspect-[16/10]">
+                    <button
+                        type="button"
+                        class="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-3 text-white transition hover:bg-black/75 disabled:cursor-default disabled:opacity-50"
+                        :disabled="galleryImages.length < 2"
+                        @click="showPreviousGalleryImage"
+                        aria-label="Previous image"
+                    >
+                        <i class="pi pi-angle-left text-base"></i>
+                    </button>
+                    <img
+                        :src="activeGalleryImage.url"
+                        :alt="content.galleryImageAlt"
+                        class="h-full w-full object-contain"
+                    />
+                    <button
+                        type="button"
+                        class="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-3 text-white transition hover:bg-black/75 disabled:cursor-default disabled:opacity-50"
+                        :disabled="galleryImages.length < 2"
+                        @click="showNextGalleryImage"
+                        aria-label="Next image"
+                    >
+                        <i class="pi pi-angle-right text-base"></i>
+                    </button>
+                </div>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                        v-for="(image, index) in galleryImages"
+                        :key="`preview-${image.id ?? image.url ?? index}`"
+                        type="button"
+                        class="h-2.5 w-2.5 rounded-full transition"
+                        :class="galleryCarouselIndex === index ? 'bg-[var(--terracotta)]' : 'bg-black/20 hover:bg-black/40'"
+                        :aria-label="`Go to image ${index + 1}`"
+                        @click="setGalleryImage(index)"
+                    ></button>
+                </div>
+            </div>
+        </Dialog>
+
     </div>
 </template>
 
@@ -728,6 +822,12 @@ const localeLabels = computed(() => {
     return labels && typeof labels === 'object' ? labels : {};
 });
 const localeOptionLabel = (locale) => localeLabels.value[locale] || locale.toUpperCase();
+const localeShortCode = (locale) => {
+    const normalized = normalizeLocaleCode(locale);
+    const shortCode = normalized.slice(0, 2).toUpperCase();
+
+    return shortCode || String(locale || '').slice(0, 2).toUpperCase();
+};
 const defaultLocale = computed(() => {
     const locale = normalizeLocaleCode(localization.value.default_locale);
 
@@ -1482,6 +1582,66 @@ const heroBackgroundStyle = computed(() => {
 });
 
 const galleryImages = computed(() => props.apartment?.images ?? []);
+const galleryCarouselIndex = ref(0);
+const galleryPreviewVisible = ref(false);
+const hasGalleryImages = computed(() => galleryImages.value.length > 0);
+
+const normalizeGalleryIndex = (index) => {
+    const total = galleryImages.value.length;
+
+    if (!total) {
+        return 0;
+    }
+
+    return ((index % total) + total) % total;
+};
+
+const setGalleryImage = (index) => {
+    if (!hasGalleryImages.value) {
+        return;
+    }
+
+    galleryCarouselIndex.value = normalizeGalleryIndex(index);
+};
+
+const showPreviousGalleryImage = () => {
+    setGalleryImage(galleryCarouselIndex.value - 1);
+};
+
+const showNextGalleryImage = () => {
+    setGalleryImage(galleryCarouselIndex.value + 1);
+};
+
+const openGalleryPreview = (index = galleryCarouselIndex.value) => {
+    if (!hasGalleryImages.value) {
+        return;
+    }
+
+    setGalleryImage(index);
+    galleryPreviewVisible.value = true;
+};
+
+const activeGalleryImage = computed(() => {
+    if (!hasGalleryImages.value) {
+        return null;
+    }
+
+    return galleryImages.value[galleryCarouselIndex.value] ?? null;
+});
+
+watch(
+    () => galleryImages.value.length,
+    (length) => {
+        if (!length) {
+            galleryCarouselIndex.value = 0;
+            galleryPreviewVisible.value = false;
+            return;
+        }
+
+        galleryCarouselIndex.value = Math.min(galleryCarouselIndex.value, length - 1);
+    },
+    { immediate: true },
+);
 
 const infoCards = computed(() => [
     {
