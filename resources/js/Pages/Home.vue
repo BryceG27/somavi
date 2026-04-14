@@ -23,13 +23,13 @@
             <div class="mx-auto w-[90%] border-b border-white/25">
                 <nav class="flex items-center justify-between py-5 text-white">
                     <div class="flex items-center gap-4">
-                        <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 text-xs font-semibold uppercase tracking-[0.3em]">
+                        <!-- <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 text-xs font-semibold uppercase tracking-[0.3em]">
                             SM
-                        </div>
+                        </div> -->
                         <div>
-                            <p class="text-xs uppercase tracking-[0.35em] text-white/70">
+                            <!-- <p class="text-xs uppercase tracking-[0.35em] text-white/70">
                                 {{ content.address || 'Palermo' }}
-                            </p>
+                            </p> -->
                             <p class="text-lg font-semibold" style="font-family: var(--font-display);">
                                 {{ content.name }}
                             </p>
@@ -106,7 +106,7 @@
                             <span class="text-base">→</span>
                         </a>
                     </div>
-                    <div class="mt-12 grid gap-4 text-sm text-white/80 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="mt-12 mb-5 grid gap-4 text-sm text-white/80 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur">
                             <p class="text-xs uppercase tracking-[0.3em] text-white/60">{{ content.labels.rooms }}</p>
                             <p class="mt-2 text-2xl font-semibold">{{ content.roomsLabel }}</p>
