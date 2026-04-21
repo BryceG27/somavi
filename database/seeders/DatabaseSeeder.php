@@ -29,21 +29,14 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Customer'],
         );
 
-        User::create([
-            'name' => 'Gabriele',
-            'surname' => 'Fuschi',
-            'email' => 'fuschigabriele88@gmail.com',
-            'password' => Hash::make("Gabriele88!"),
-            'user_group_id' => $adminGroup->id,
-        ]);
+        $user_json = json_decode(file_get_contents(database_path('/seeders/users.json')), true);
 
-        User::create([
-            'name' => 'Fabrizio',
-            'surname' => 'Guarino',
-            'email' => 'fabrizio1.guarino@outlook.it',
-            'password' => Hash::make("Fabr5z5698!"),
-            'user_group_id' => $adminGroup->id,
-        ]);
+        foreach ($user_json as $user_data) {
+            $user_data['password'] = Hash::make($user_data['password']);
+            $user_data['user_group_id'] = $adminGroup->id;
+
+            User::create($user_data);
+        }
 
         $this->call(ApartmentSeeder::class);
     }
